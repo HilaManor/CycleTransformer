@@ -1,10 +1,6 @@
-output_dir: '.\results'
-#db_path: '/databases/102flowers'
-db_path: 'F:\Downloads\102flowers\102flowers'
+output_dir: './results'
+db_path: '../databases/102flowers'
 db_type: 'flowers'
-#data_path_train: './clean_data/baby"
-#data_path_test: "./clean_data/office_products"
-
 
 training_args:
   batch_size: 16
@@ -21,6 +17,7 @@ txt2im_model_args:
     out_channels: 3
     kernel_size: 3
     #num_layers:
+  linear_out_dim: 100
   encoder_args:
     name: 'distilbert-base-uncased'
 

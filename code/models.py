@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import transformers
@@ -7,9 +8,9 @@ from transformers import VisionEncoderDecoderModel, DeiTFeatureExtractor, AutoTo
 class Generator(nn.Module):
     def __init__(self, generator_args, input_dim):
         super().__init__()
-        self.out_channels = generator_args.out_channels  # color channels
+        self.out_channels = generator_args["out_channels"]  # color channels
         self.input_dim = input_dim
-        self.nf = generator_args.nf
+        self.nf = generator_args["nf"]
 
         self.body = nn.Sequential(
             # state size: b x (input_dim) x 1 x 1
@@ -55,7 +56,7 @@ class Generator(nn.Module):
             # state size: b x (nf * 4) x 28 x 28
             nn.ConvTranspose2d(in_channels=self.nf * 4,
                                out_channels=self.nf * 2,
-                               kernel_size=2,
+                               kernel_size=4,
                                stride=2,
                                padding=1,
                                bias=True),
@@ -84,50 +85,57 @@ class Generator(nn.Module):
         )
 
     def forward(self, noise, bert_embed):
+        bert_embed = bert_embed.view(bert_embed.shape[0], -1, 1, 1)
         gen_input = torch.cat([noise, bert_embed], 1)
         return self.body(gen_input)
+        
 
 class Text2Image(nn.Module):
     # Text -> BERT -> Generator -> Image
-    def __init__(self, txt2im_model_args):
+    def __init__(self, txt2im_model_args, txt_max_len):
         super().__init__()
-        self.bert = transformers.BertModel.from_pretrained(txt2im_model_args.encoder_args.name)
-        self.tokenizer = transformers.BertTokenizer.from_pretrained(txt2im_model_args.encoder_args.name)
+        self.bert = transformers.DistilBertModel.from_pretrained(txt2im_model_args["encoder_args"]["name"])
+        self.tokenizer = transformers.DistilBertTokenizer.from_pretrained(txt2im_model_args["encoder_args"]["name"])
         self.bert_embed_dim = self.bert.config.hidden_size  # bert's output size
         # We need to add noise so the generator will be able to create multiple images for the same text
-        self.noise_dim = torch.round(self.bert_embed_dim * txt2im_model_args.noise_dim_percent)
+        self.noise_dim = int(np.round(self.bert_embed_dim * txt2im_model_args["noise_dim_percent"]))
+        self.linear_out = txt2im_model_args["linear_out_dim"]
+        self.txt_max_len = txt_max_len
+        self.linear = nn.Linear(self.bert_embed_dim, self.linear_out)
         # The generator input will be a concatenation of bert's embedding + the noise
-        self.generator = Generator(txt2im_model_args.generator_args,
-                                   self.noise_dim + self.bert_embed_dim)
+        self.generator = Generator(txt2im_model_args["generator_args"],
+                                   self.noise_dim + self.linear_out * self.txt_max_len)
 
-    def forward(self, text_tokens, fixed_noise=None):
-        bert_out = self.bert(**text_tokens)
-        bert_embed = bert_out.last_hidden_state
+    def forward(self, x, fixed_noise=None):
+        x = self.bert(x)
+        x = x.last_hidden_state
+        x = self.linear(x)
 
         if fixed_noise is None:
             # Here we're only creating the noise that would be later concatenated to the embedding
-            noise = torch.rand((bert_embed.shape[0], self.noise_dim, 1, 1))
+            noise = torch.rand((x.shape[0], self.noise_dim, 1, 1))
         else:
             noise = fixed_noise
-        return self.generator(noise, bert_embed)
+        return self.generator(noise, x)
 
 class Image2Text(nn.Module):
     # Image -> DeiT -> GPT2 -> Text
-    def __init__(self, im2txt_model_args):
+    def __init__(self, im2txt_model_args, txt_max_len):
         super().__init__()
 
-        self.vis_enc_dec = VisionEncoderDecoderModel.from_encoder_decoder_pretrained(im2txt_model_args.encoder_name,
-                                                                                     im2txt_model_args.decoder_name)
+        self.vis_enc_dec = VisionEncoderDecoderModel.from_encoder_decoder_pretrained(im2txt_model_args["encoder_name"],
+                                                                                     im2txt_model_args["decoder_name"])
         # model = DeiTModel.from_pretrained("facebook/deit-base-distilled-patch16-224",
         #                                          add_pooling_layer=False)
-        self.feature_extractor = DeiTFeatureExtractor.from_pretrained(im2txt_model_args.encoder_name)
-        self.tokenizer = AutoTokenizer.from_pretrained(im2txt_model_args.decoder_name, use_fast=True)
+        self.feature_extractor = DeiTFeatureExtractor.from_pretrained(im2txt_model_args["encoder_name"])
+        self.tokenizer = AutoTokenizer.from_pretrained(im2txt_model_args["decoder_name"], use_fast=True)
 
         # set special tokens used for creating the decoder_input_ids from the labels
         self.vis_enc_dec.config.decoder_start_token_id = self.tokenizer.bos_token_id
         self.vis_enc_dec.config.pad_token_id = self.tokenizer.pad_token_id
         # make sure vocab size is set correctly
         self.vis_enc_dec.config.vocab_size = self.vis_enc_dec.config.decoder.vocab_size
+        self.txt_max_len = txt_max_len
 
         # # Accessing the model configuration
         # config_encoder = model.config.encoder
@@ -137,8 +145,8 @@ class Image2Text(nn.Module):
         # config_decoder.add_cross_attention = True
 
     def forward(self, x):
-        x = self.vis_enc_dec(pixel_values=x)
-        #x = self.vis_enc_dec.generate(x)
+        #x = self.vis_enc_dec(pixel_values=x)
+        x = self.vis_enc_dec.generate(x, max_length=self.txt_max_len)
         return x
 
     def decode_text(self, ids):
