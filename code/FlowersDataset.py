@@ -4,6 +4,7 @@ from transformers import DeiTFeatureExtractor, DistilBertTokenizer
 import os
 from PIL import Image
 
+
 class ImageCaption102FlowersDataset(Dataset):
     def __init__(self, args, transform=None):
         self.flowers_path = args["db_path"]
@@ -29,7 +30,6 @@ class ImageCaption102FlowersDataset(Dataset):
             txt = f.read().split('\n')[txt_idx]
 
         # prepare image (i.e. resize + normalize)
-        pixel_values = self.feature_extractor(im, return_tensors="pt").pixel_values
         labels = self.BERT_tokenizer(txt, padding="max_length", truncation=True,
                                      max_length=self.txt_max_len, return_tensors="pt").input_ids.squeeze()
 
@@ -39,4 +39,4 @@ class ImageCaption102FlowersDataset(Dataset):
         if self.transform:
             im = self.transform(im)
 
-        return im, pixel_values.squeeze(), labels, masked_labels
+        return im, labels, masked_labels

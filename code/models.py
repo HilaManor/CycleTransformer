@@ -119,6 +119,9 @@ class Text2Image(nn.Module):
             noise = fixed_noise
         return self.generator(noise.to(self.device), x)
 
+    def decode_text(self, ids):
+        return self.tokenizer.batch_decode(ids, skip_special_tokens=True)  # [0]
+
 class Image2Text(nn.Module):
     # Image -> DeiT -> GPT2 -> Text
     def __init__(self, im2txt_model_args, txt_max_len, device='cpu'):
@@ -147,8 +150,14 @@ class Image2Text(nn.Module):
         # config_decoder.add_cross_attention = True
 
     def forward(self, x, gt_labels):
+        x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze()
         x = self.vis_enc_dec(pixel_values=x, labels=gt_labels)
         #x = self.vis_enc_dec.generate(x, max_length=self.txt_max_len)
+        return x
+
+    def generate(self, x):
+        x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze()
+        x = self.vis_enc_dec.generate(pixel_values=x, max_length=self.txt_max_len)
         return x
 
     def decode_text(self, ids):

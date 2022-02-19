@@ -1,6 +1,9 @@
 import argparse
 import yaml
 import training
+import generating
+import utils
+import torch
 from FlowersDataset import ImageCaption102FlowersDataset
 from torchvision import transforms
 
@@ -32,5 +35,10 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError("No such DB")
 
-    training.train(args, dataset)
-    training.eval(args, dataset)
+    utils.create_output_dir(args)
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"Using {device}")
+
+    training.train(args, dataset, device)
+    generating.generate(args, dataset, device)
