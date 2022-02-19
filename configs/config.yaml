@@ -6,8 +6,8 @@ training_args:
   batch_size: 4
   txt_max_len: 10
   learning_rate: 1e-5
-  test_percent: 0.98
-  val_percent: 0.01
+  test_percent: 0.2
+  val_percent: 0.2
 
 txt2im_model_args:
   noise_dim_percent: 0.5

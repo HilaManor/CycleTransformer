@@ -150,14 +150,14 @@ class Image2Text(nn.Module):
         # config_decoder.add_cross_attention = True
 
     def forward(self, x, gt_labels):
-        x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze()
+        x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze().to(self.device)
         x = self.vis_enc_dec(pixel_values=x, labels=gt_labels)
         #x = self.vis_enc_dec.generate(x, max_length=self.txt_max_len)
         return x
 
     def generate(self, x):
-        x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze()
-        x = self.vis_enc_dec.generate(pixel_values=x, max_length=self.txt_max_len)
+        x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze().to(self.device)
+        x = self.vis_enc_dec.generate(pixel_values=x, max_length=self.txt_max_len, return_dict_in_generate=True).sequences
         return x
 
     def decode_text(self, ids):

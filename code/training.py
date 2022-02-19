@@ -7,7 +7,7 @@ from tqdm import tqdm
 import os
 import pprint
 import data_utils
-
+from torchvision import transforms
 
 def train(args, dataset, device):
     with open(os.path.join(args["output_dir"], 'log.txt'), 'w') as fp:
@@ -26,6 +26,7 @@ def train(args, dataset, device):
     #im2txt_criterion = nn.CrossEntropyLoss()  # ?????
 
     print(" ------------------------ STARTING TRAINING SUCCESS ERROR WARNING NONE None ------------------------ ")
+    deTensor = transforms.ToPILImage()
     for epoch in range(1, args["epochs"] + 1):
         txt2im_model.train()
         im2txt_model.train()
@@ -47,7 +48,9 @@ def train(args, dataset, device):
             txt2im_running_loss += txt2im_loss.data.item()
             
             # Memory cleanup
-            im = im.detach()
+            
+            im = [deTensor(x) for x in im.detach().cpu()]
+
             del im_gt, txt2im_loss, txt_tokens
             torch.cuda.empty_cache()
 
@@ -115,6 +118,7 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit, im2txt_crit, dataloade
     im2txt_model.eval()
     txt2im_running_loss = 0.0
     im2txt_running_loss = 0.0
+    deTensor = transforms.ToPILImage()
     with torch.no_grad():
         for i, (im, txt_tokens, masked_txt_tokens) in enumerate(dataloader):
             # text to image
@@ -124,6 +128,8 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit, im2txt_crit, dataloade
     
             txt2im_loss = txt2im_crit(im, im_gt)
             txt2im_running_loss += txt2im_loss.data.item()
+            
+            im = [deTensor(x) for x in im.detach().cpu()]
             
             # Memory cleanup
             del im_gt, txt2im_loss, txt_tokens
