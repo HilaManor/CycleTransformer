@@ -21,7 +21,7 @@ class ImageCaption102FlowersDataset(Dataset):
         if type(idx) == torch.Tensor:
             idx = idx.item()
 
-        img_idx = idx // 10
+        img_idx = idx // 10 + 1
         txt_idx = idx % 10
 
         im = Image.open(os.path.join(self.imgs_path, f'image_{img_idx:05}.jpg')).convert("RGB")
@@ -34,9 +34,9 @@ class ImageCaption102FlowersDataset(Dataset):
                                      max_length=self.txt_max_len, return_tensors="pt").input_ids.squeeze()
 
         # important: make sure that PAD tokens are ignored by the loss function
-        #labels = [label if label != self.BERT_tokenizer.pad_token_id else -100 for label in labels[0]]
+        masked_labels = torch.tensor([label if label != self.BERT_tokenizer.pad_token_id else -100 for label in labels])
 
         if self.transform:
             im = self.transform(im)
 
-        return im, pixel_values.squeeze(), labels  #torch.tensor(labels)
+        return im, pixel_values.squeeze(), labels, masked_labels

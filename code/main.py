@@ -14,6 +14,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('CycleTransformer')
     parser.add_argument('--epochs', type=int, default=5,
                         help='The amount of epochs to train the model')
+    parser.add_argument('--val_epochs', type=int, default=5,
+                        help='The amount of epochs for which to check the validation metrics')
     parser.add_argument('--config', default='../configs/config.yaml', type=str,
                         help='Path to YAML config file. Default: config.yaml')
     parsed_args = parser.parse_args()
@@ -31,3 +33,4 @@ if __name__ == '__main__':
         raise NotImplementedError("No such DB")
 
     training.train(args, dataset)
+    training.eval(args, dataset)

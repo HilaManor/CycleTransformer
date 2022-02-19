@@ -92,8 +92,9 @@ class Generator(nn.Module):
 
 class Text2Image(nn.Module):
     # Text -> BERT -> Generator -> Image
-    def __init__(self, txt2im_model_args, txt_max_len):
+    def __init__(self, txt2im_model_args, txt_max_len, device='cpu'):
         super().__init__()
+        self.device = device
         self.bert = transformers.DistilBertModel.from_pretrained(txt2im_model_args["encoder_args"]["name"])
         self.tokenizer = transformers.DistilBertTokenizer.from_pretrained(txt2im_model_args["encoder_args"]["name"])
         self.bert_embed_dim = self.bert.config.hidden_size  # bert's output size
@@ -116,21 +117,22 @@ class Text2Image(nn.Module):
             noise = torch.rand((x.shape[0], self.noise_dim, 1, 1))
         else:
             noise = fixed_noise
-        return self.generator(noise, x)
+        return self.generator(noise.to(self.device), x)
 
 class Image2Text(nn.Module):
     # Image -> DeiT -> GPT2 -> Text
-    def __init__(self, im2txt_model_args, txt_max_len):
+    def __init__(self, im2txt_model_args, txt_max_len, device='cpu'):
         super().__init__()
-
+        self.device = device
         self.vis_enc_dec = VisionEncoderDecoderModel.from_encoder_decoder_pretrained(im2txt_model_args["encoder_name"],
                                                                                      im2txt_model_args["decoder_name"])
         # model = DeiTModel.from_pretrained("facebook/deit-base-distilled-patch16-224",
         #                                          add_pooling_layer=False)
         self.feature_extractor = DeiTFeatureExtractor.from_pretrained(im2txt_model_args["encoder_name"])
         self.tokenizer = AutoTokenizer.from_pretrained(im2txt_model_args["decoder_name"], use_fast=True)
-
+        
         # set special tokens used for creating the decoder_input_ids from the labels
+        self.tokenizer.pad_token = self.tokenizer.eos_token
         self.vis_enc_dec.config.decoder_start_token_id = self.tokenizer.bos_token_id
         self.vis_enc_dec.config.pad_token_id = self.tokenizer.pad_token_id
         # make sure vocab size is set correctly
@@ -139,14 +141,14 @@ class Image2Text(nn.Module):
 
         # # Accessing the model configuration
         # config_encoder = model.config.encoder
-        # config_decoder = model.config.decoder
+        # config_decoder = self.vis_enc_dec.config.decoder
         # # set decoder config to causal lm
         # config_decoder.is_decoder = True
         # config_decoder.add_cross_attention = True
 
-    def forward(self, x):
-        #x = self.vis_enc_dec(pixel_values=x)
-        x = self.vis_enc_dec.generate(x, max_length=self.txt_max_len)
+    def forward(self, x, gt_labels):
+        x = self.vis_enc_dec(pixel_values=x, labels=gt_labels)
+        #x = self.vis_enc_dec.generate(x, max_length=self.txt_max_len)
         return x
 
     def decode_text(self, ids):
