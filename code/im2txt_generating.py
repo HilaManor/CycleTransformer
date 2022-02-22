@@ -12,7 +12,6 @@ def generate(args, dataset, device):
     im2txt_model = Image2Text(args["im2txt_model_args"], args["training_args"]["txt_max_len"], device).to(device)
 
     states_dict = torch.load(os.path.join(args['output_dir'], 'models.pth'), map_location=device)
-    txt2im_model.load_state_dict(states_dict['txt2im'])
     im2txt_model.load_state_dict(states_dict['im2txt'])
 
     txt2im_model.eval()
@@ -25,40 +24,40 @@ def generate(args, dataset, device):
     deTensor = transforms.ToPILImage()
 
     with torch.no_grad():
-        for i, (gt_im, txt_tokens, _, im_idx, txt_idx) in enumerate(test_loader):
+        for i, (gt_im, txt_tokens, _) in enumerate(test_loader):
             torch.cuda.empty_cache()
             txt_tokens = txt_tokens.to(device)
-            gen_im = txt2im_model(txt_tokens)
 
             txt_tokens[txt_tokens == -100] = txt2im_model.tokenizer.pad_token_id 
             gt_sentence = txt2im_model.decode_text(txt_tokens)
-            del txt_tokens
             torch.cuda.empty_cache()
 
-            gen_im = [deTensor(x) for x in gen_im.detach().cpu()]
             gt_im = [deTensor(x) for x in gt_im]
 
-            gen_tokens = im2txt_model.generate(gen_im)
-            #gen_tokens[gen_tokens == -100] = im2txt_model.tokenizer.pad_token_id 
+            gen_tokens = im2txt_model.generate(gt_im)
+            print(txt_tokens)
+            print('------------------------------------------')
+            print(gen_tokens)
+            gen_tokens[gen_tokens == -100] = im2txt_model.tokenizer.pad_token_id 
             gen_sentence = im2txt_model.decode_text(gen_tokens)
             gen_sentence = [s.strip() for s in gen_sentence]
             
 
-            for j in range(len(gen_im)):
+            for j in range(len(gt_im)):
                 print(repr(gen_sentence[j]))
                 plt.figure()
-                plt.subplot(1,2,1)
-                plt.imshow(gen_im[j])
-                plt.title('Generated Image')
 
                 plt.subplot(1, 2, 2)
                 plt.imshow(gt_im[j])
                 plt.title('Ground Truth Image')
 
                 pair_idx = i * args["training_args"]["batch_size"] + j
+                if args["db_type"] == 'flowers':
+                    im_num = pair_idx // 10 + 1
+                    sentence_num = pair_idx % 10
                 plt.suptitle(f'GT: {gt_sentence[j]}\nGen: {gen_sentence[j]}')
                 plt.savefig(os.path.join(gens_dir,
-                                         f"im{im_idx[j]:05}_sen{txt_idx[j]}.png"))
+                                         f"im{im_num:05}_sen{sentence_num:02}.png"))
                 plt.close('all')
 
             

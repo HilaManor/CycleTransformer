@@ -9,14 +9,11 @@ from FlowersDataset import ImageCaption102FlowersDataset
 
 def generate(args, dataset, device):
     txt2im_model = Text2Image(args["txt2im_model_args"], args["training_args"]["txt_max_len"], device).to(device)
-    im2txt_model = Image2Text(args["im2txt_model_args"], args["training_args"]["txt_max_len"], device).to(device)
 
     states_dict = torch.load(os.path.join(args['output_dir'], 'models.pth'), map_location=device)
     txt2im_model.load_state_dict(states_dict['txt2im'])
-    im2txt_model.load_state_dict(states_dict['im2txt'])
 
     txt2im_model.eval()
-    im2txt_model.eval()
 
     _, _, test_loader = data_utils.get_loaders(args, dataset)
 
@@ -38,14 +35,8 @@ def generate(args, dataset, device):
             gen_im = [deTensor(x) for x in gen_im.detach().cpu()]
             gt_im = [deTensor(x) for x in gt_im]
 
-            gen_tokens = im2txt_model.generate(gen_im)
-            #gen_tokens[gen_tokens == -100] = im2txt_model.tokenizer.pad_token_id 
-            gen_sentence = im2txt_model.decode_text(gen_tokens)
-            gen_sentence = [s.strip() for s in gen_sentence]
-            
 
             for j in range(len(gen_im)):
-                print(repr(gen_sentence[j]))
                 plt.figure()
                 plt.subplot(1,2,1)
                 plt.imshow(gen_im[j])
@@ -56,7 +47,7 @@ def generate(args, dataset, device):
                 plt.title('Ground Truth Image')
 
                 pair_idx = i * args["training_args"]["batch_size"] + j
-                plt.suptitle(f'GT: {gt_sentence[j]}\nGen: {gen_sentence[j]}')
+                plt.suptitle(f'GT: {gt_sentence[j]}')
                 plt.savefig(os.path.join(gens_dir,
                                          f"im{im_idx[j]:05}_sen{txt_idx[j]}.png"))
                 plt.close('all')

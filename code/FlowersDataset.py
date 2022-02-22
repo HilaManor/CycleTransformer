@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset
-from transformers import DeiTFeatureExtractor, DistilBertTokenizer
+from transformers import DeiTFeatureExtractor, DistilBertTokenizer, AutoTokenizer
 import os
 from PIL import Image
 
@@ -9,6 +9,8 @@ class ImageCaption102FlowersDataset(Dataset):
     def __init__(self, args, transform=None):
         self.flowers_path = args["db_path"]
         self.BERT_tokenizer = DistilBertTokenizer.from_pretrained(args["txt2im_model_args"]["encoder_args"]["name"])
+        self.GPT2tokenizer = AutoTokenizer.from_pretrained(args["im2txt_model_args"]["decoder_name"], use_fast=True)
+        self.GPT2tokenizer.pad_token = self.GPT2tokenizer.eos_token
         self.feature_extractor = DeiTFeatureExtractor.from_pretrained(args["im2txt_model_args"]["encoder_name"])
         self.imgs_path = os.path.join(self.flowers_path, 'imgs')
         self.txts_path = os.path.join(self.flowers_path, 'txts')
@@ -30,13 +32,17 @@ class ImageCaption102FlowersDataset(Dataset):
             txt = f.read().split('\n')[txt_idx]
 
         # prepare image (i.e. resize + normalize)
-        labels = self.BERT_tokenizer(txt, padding="max_length", truncation=True,
+        txt2im_labels = self.BERT_tokenizer(txt, padding="max_length", truncation=True,
                                      max_length=self.txt_max_len, return_tensors="pt").input_ids.squeeze()
 
+        im2txt_labels = self.GPT2tokenizer(txt, padding="max_length", truncation=True,
+                                     max_length=self.txt_max_len, return_tensors="pt").input_ids.squeeze()
+
+        
         # important: make sure that PAD tokens are ignored by the loss function
-        masked_labels = torch.tensor([label if label != self.BERT_tokenizer.pad_token_id else -100 for label in labels])
+        im2txt_masked_labels = torch.tensor([label if label != self.GPT2tokenizer.pad_token_id else -100 for label in im2txt_labels])
 
         if self.transform:
             im = self.transform(im)
 
-        return im, labels, masked_labels
+        return im, txt2im_labels, im2txt_masked_labels, img_idx, txt_idx
