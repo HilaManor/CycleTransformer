@@ -1,5 +1,5 @@
 import torch
-from models import Text2Image, Image2Text
+from models_1 import Text2Image, Image2Text
 import os
 import data_utils
 import matplotlib.pyplot as plt

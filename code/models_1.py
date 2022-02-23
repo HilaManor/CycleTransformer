@@ -19,69 +19,49 @@ class Generator(nn.Module):
                                kernel_size=4,
                                stride=1,
                                padding=0,
-                               bias=True),
+                               bias=False),
             nn.BatchNorm2d(self.nf * 32),
-            nn.LeakyReLU(0.1, inplace=True),
+            nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf * 32) x 4 x 4
             nn.ConvTranspose2d(in_channels=self.nf * 32,
                                out_channels=self.nf * 16,
-                               kernel_size=3,
-                               stride=2,
-                               padding=1,
-                               bias=True),
-            nn.BatchNorm2d(self.nf * 16),
-            nn.LeakyReLU(0.1, inplace=True),
-            # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
-            # state size: b x (nf * 16) x 7 x 7
-            nn.ConvTranspose2d(in_channels=self.nf * 16,
-                               out_channels=self.nf * 8,
                                kernel_size=4,
                                stride=2,
                                padding=1,
-                               bias=True),
-            nn.BatchNorm2d(self.nf * 8),
-            nn.LeakyReLU(0.1, inplace=True),
+                               bias=False),
+            nn.BatchNorm2d(self.nf * 16),
+            nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
-            # state size: b x (nf *8) x 14 x 14
-            nn.ConvTranspose2d(in_channels=self.nf * 8,
+            # state size: b x (nf * 16) x 8 x 8
+            nn.ConvTranspose2d(in_channels=self.nf * 16,
                                out_channels=self.nf * 4,
                                kernel_size=4,
                                stride=2,
                                padding=1,
-                               bias=True),
+                               bias=False),
             nn.BatchNorm2d(self.nf * 4),
-            nn.LeakyReLU(0.1, inplace=True),
+            nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
-            # state size: b x (nf * 4) x 28 x 28
+            # state size: b x (nf * 4) x 16 x 16
             nn.ConvTranspose2d(in_channels=self.nf * 4,
-                               out_channels=self.nf * 2,
-                               kernel_size=4,
-                               stride=2,
-                               padding=1,
-                               bias=True),
-            nn.BatchNorm2d(self.nf * 2),
-            nn.LeakyReLU(0.1, inplace=True),
-            # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
-            # state size: b x (nf * 2) x 56 x 56
-            nn.ConvTranspose2d(in_channels=self.nf * 2,
                                out_channels=self.nf,
                                kernel_size=4,
                                stride=2,
                                padding=1,
-                               bias=True),
+                               bias=False),
             nn.BatchNorm2d(self.nf),
-            nn.LeakyReLU(0.1, inplace=True),
+            nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
-            # state size: b x (nf) x 112 x 112
+            # state size: b x (nf) x 32 x 32
             nn.ConvTranspose2d(in_channels=self.nf,
                                out_channels=self.out_channels,
                                kernel_size=4,
                                stride=2,
                                padding=1,
-                               bias=True),
+                               bias=False),
             nn.Tanh()
-            # state size: b x (nc) x 224 x 224
+            # state size: b x (nc) x 64 x 64
         )
 
     def forward(self, noise, bert_embed):
