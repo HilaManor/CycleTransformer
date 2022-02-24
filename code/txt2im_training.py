@@ -1,12 +1,13 @@
 import torch
 import torch.nn as nn
-from models_1 import Text2Image, Image2Text
+from models import Text2Image, Image2Text
 import time
 from tqdm import tqdm
 import os
 import pprint
 import data_utils
 from torchvision import transforms
+from losses import GramLoss
 
 def train(args, dataset, device):
     with open(os.path.join(args["output_dir"], 'log.txt'), 'w') as fp:
@@ -19,8 +20,9 @@ def train(args, dataset, device):
     txt2im_optimizer = torch.optim.Adam(txt2im_model.parameters(), lr=float(args["training_args"]["learning_rate"]))
 
     #txt2im_criterion = nn.MSELoss()
-    txt2im_criterion = nn.L1Loss()
-    
+    #txt2im_criterion = nn.L1Loss()
+    txt2im_criterion = GramLoss()
+
     print(" ------------------------ STARTING TRAINING SUCCESS ERROR WARNING NONE None ------------------------ ")
     deTensor = transforms.ToPILImage()
     for epoch in range(1, args["epochs"] + 1):

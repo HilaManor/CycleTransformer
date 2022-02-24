@@ -1,7 +1,7 @@
 
 import torch
 import torch.nn as nn
-from models_1 import Text2Image, Image2Text
+from models import Text2Image, Image2Text
 import time
 from tqdm import tqdm
 import os

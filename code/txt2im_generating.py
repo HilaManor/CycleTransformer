@@ -65,7 +65,7 @@ if __name__ == '__main__':
     args = torch.load(os.path.join(parsed_args.out_dir, 'models.pth'), map_location=device)['args']
     
     if args['db_type'] == 'flowers':
-        transformations = transforms.Compose([transforms.Resize((224,224)),
+        transformations = transforms.Compose([transforms.Resize((64,64)),
                                               transforms.ToTensor()])
         dataset = ImageCaption102FlowersDataset(args, transformations)
     else:
