@@ -37,8 +37,8 @@ class Normalization(nn.Module):
         # .view the mean and std to make them [C x 1 x 1] so that they can
         # directly work with image Tensor of shape [B x C x H x W].
         # B is batch size. C is number of channels. H is height and W is width.
-        self.mean = mean.clone().detach().view(-1, 1, 1)
-        self.std = std.clone().detach().view(-1, 1, 1)
+        self.mean = mean.detach().view(-1, 1, 1)
+        self.std = std.detach().view(-1, 1, 1)
 
     def forward(self, img):
         """
@@ -46,7 +46,7 @@ class Normalization(nn.Module):
         :param img: the image to normalize, assumes 4D image tensor.
         :return: normalized image.
         """
-
+        #print(f'NORM: {img.shape}')
         return (img - self.mean) / self.std
 
 
@@ -63,8 +63,8 @@ class GramLoss(nn.Module):
         super().__init__()
         self.device = device
         vgg = VGG(pretrained=True).features.to(self.device).eval()
-        self.norm = Normalization(torch.tensor([0.485, 0.456, 0.406]),
-                                  torch.tensor([0.229, 0.224, 0.225]))
+        self.norm = Normalization(torch.tensor([0.485, 0.456, 0.406]).to(self.device),
+                                  torch.tensor([0.229, 0.224, 0.225]).to(self.device))
         self.chosen_layers = chosen_layers
         if self.chosen_layers is None:
             self.chosen_layers = ['conv1_1', 'conv2_1', 'conv3_1', 'conv4_1', 'conv5_1']
@@ -80,7 +80,7 @@ class GramLoss(nn.Module):
 
         # assuming that vgg is a nn.Sequential, so we make a new nn.Sequential
         # to put in modules that are supposed to be activated sequentially
-        self.vgg = nn.Sequential(self.norm)
+        self.vgg = nn.Sequential()#self.norm)
 
         i = 0  # increment every time we see a conv
         loss_f = None
@@ -104,18 +104,28 @@ class GramLoss(nn.Module):
 
 
     def forward(self, input, target):
-
         chosen_layers_outs = []
-        for name, module in self.vgg.named_modules():
+        input = self.norm(input)
+        target = self.norm(target)
+        #print('**********************************************************')
+        #print(list(self.vgg.named_modules()))
+        #print('**********************************************************')
+        
+        for name, module in list(self.vgg.named_modules())[1:]:
+            #print(f'input to layer {name}: {input.shape}')        
             input = module(input)
+            #print(f'output: {input.shape}')
             target = module(target)
 
             if name.startswith('conv') and VGG19_LAYERS_TRANSLATION[name] in self.chosen_layers:
-                input = self._gram_matrix(input)
-                target = self._gram_matrix(target)
-                chosen_layers_outs.append(nn.functional.mse_loss(input, target))
-
-        return torch.tensor(chosen_layers_outs) * self.weights
+                input_gram = self._gram_matrix(input)
+                target_gram = self._gram_matrix(target)
+                chosen_layers_outs.append(nn.functional.mse_loss(input_gram, target_gram))
+        
+        loss = 0
+        for i in range(len(chosen_layers_outs)):
+            loss += chosen_layers_outs[i] * self.weights[i]
+        return loss
 
     @staticmethod
     def _gram_matrix(x):
@@ -128,7 +138,7 @@ class GramLoss(nn.Module):
         # b=number of feature maps
         # (c,d)=dimensions of a f. map (N=c*d)
 
-        features = x.view(a * b, c * d)  # resise F_XL into \hat F_XL
+        features = x.reshape(a * b, c * d)  # reshape F_XL into \hat F_XL
 
         g = torch.mm(features, features.t())  # compute the gram product
 

@@ -111,6 +111,7 @@ class Text2Image(nn.Module):
         x = self.bert(x)
         x = x.last_hidden_state
         x = self.linear(x)
+        print(x)
 
         if fixed_noise is None:
             # Here we're only creating the noise that would be later concatenated to the embedding

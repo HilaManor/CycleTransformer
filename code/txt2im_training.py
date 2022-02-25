@@ -21,7 +21,7 @@ def train(args, dataset, device):
 
     #txt2im_criterion = nn.MSELoss()
     #txt2im_criterion = nn.L1Loss()
-    txt2im_criterion = GramLoss()
+    txt2im_criterion = GramLoss(device=device)
 
     print(" ------------------------ STARTING TRAINING SUCCESS ERROR WARNING NONE None ------------------------ ")
     deTensor = transforms.ToPILImage()
