@@ -73,6 +73,7 @@ class GramLoss(nn.Module):
             self.weights = [1, 0.75, 0.2, 0.2, 0.2]
             #self.weights = [1.0, 0.5, 0.1, 0.075, 0.075]
         self.weights = torch.tensor(self.weights[:len(self.chosen_layers)]).to(self.device)
+        self.weights = self.weights / self.weights.sum() 
 
 
         # an iterable access to or list of content/syle losses

@@ -27,6 +27,8 @@ if __name__ == '__main__':
         args = yaml.load(f, Loader=yaml.FullLoader)
     args.update(vars(parsed_args))
     #args = dotdict(args)
+    
+    utils.set_seed(42)
 
     if args['db_type'] == 'flowers':
         transformations = transforms.Compose([transforms.Resize((224,224)),

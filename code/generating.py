@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from torchvision import transforms
 import argparse
 from FlowersDataset import ImageCaption102FlowersDataset
+import utils
 
 def generate(args, dataset, device):
     txt2im_model = Text2Image(args["txt2im_model_args"], args["training_args"]["txt_max_len"], device).to(device)
@@ -72,6 +73,8 @@ if __name__ == '__main__':
     print(f"Using {device}")
     
     args = torch.load(os.path.join(parsed_args.out_dir, 'models.pth'), map_location=device)['args']
+    
+    utils.set_seed(42)
     
     if args['db_type'] == 'flowers':
         transformations = transforms.Compose([transforms.Resize((224,224)),

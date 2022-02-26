@@ -2,10 +2,12 @@ import torch
 from models import Text2Image, Image2Text
 import os
 import data_utils
+import utils
 import matplotlib.pyplot as plt
 from torchvision import transforms
 import argparse
 from FlowersDataset import ImageCaption102FlowersDataset
+from textwrap import wrap
 
 def generate(args, dataset, device):
     txt2im_model = Text2Image(args["txt2im_model_args"], args["training_args"]["txt_max_len"], device).to(device)
@@ -45,9 +47,14 @@ def generate(args, dataset, device):
                 plt.subplot(1, 2, 2)
                 plt.imshow(gt_im[j])
                 plt.title('Ground Truth Image')
-
+                
+                
+                
+                
                 pair_idx = i * args["training_args"]["batch_size"] + j
-                plt.suptitle(f'GT: {gt_sentence[j]}')
+                #suptitle = plt.suptitle("\n".join(wrap(f'GT: {gt_sentence[j]}', 60)))
+                plt.suptitle(f'GT: {gt_sentence[j]}', wrap=True)
+                #suptitile.set_y(1.05)
                 plt.savefig(os.path.join(gens_dir,
                                          f"im{im_idx[j]:05}_sen{txt_idx[j]}.png"))
                 plt.close('all')
@@ -63,6 +70,8 @@ if __name__ == '__main__':
     print(f"Using {device}")
     
     args = torch.load(os.path.join(parsed_args.out_dir, 'models.pth'), map_location=device)['args']
+    
+    utils.set_seed(42)
     
     if args['db_type'] == 'flowers':
         transformations = transforms.Compose([transforms.Resize((224,224)),

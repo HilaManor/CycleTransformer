@@ -19,9 +19,10 @@ class Generator(nn.Module):
                                kernel_size=4,
                                stride=1,
                                padding=0,
-                               bias=True),
+                               bias=False),
             nn.BatchNorm2d(self.nf * 32),
-            nn.LeakyReLU(0.1, inplace=True),
+            #nn.LeakyReLU(0.1, inplace=True),
+            nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf * 32) x 4 x 4
             nn.ConvTranspose2d(in_channels=self.nf * 32,
@@ -29,9 +30,10 @@ class Generator(nn.Module):
                                kernel_size=3,
                                stride=2,
                                padding=1,
-                               bias=True),
+                               bias=False),
             nn.BatchNorm2d(self.nf * 16),
-            nn.LeakyReLU(0.1, inplace=True),
+            #nn.LeakyReLU(0.1, inplace=True),
+            nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf * 16) x 7 x 7
             nn.ConvTranspose2d(in_channels=self.nf * 16,
@@ -39,9 +41,10 @@ class Generator(nn.Module):
                                kernel_size=4,
                                stride=2,
                                padding=1,
-                               bias=True),
+                               bias=False),
             nn.BatchNorm2d(self.nf * 8),
-            nn.LeakyReLU(0.1, inplace=True),
+            #nn.LeakyReLU(0.1, inplace=True),
+            nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf *8) x 14 x 14
             nn.ConvTranspose2d(in_channels=self.nf * 8,
@@ -49,9 +52,10 @@ class Generator(nn.Module):
                                kernel_size=4,
                                stride=2,
                                padding=1,
-                               bias=True),
+                               bias=False),
             nn.BatchNorm2d(self.nf * 4),
-            nn.LeakyReLU(0.1, inplace=True),
+            #nn.LeakyReLU(0.1, inplace=True),
+            nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf * 4) x 28 x 28
             nn.ConvTranspose2d(in_channels=self.nf * 4,
@@ -59,9 +63,10 @@ class Generator(nn.Module):
                                kernel_size=4,
                                stride=2,
                                padding=1,
-                               bias=True),
+                               bias=False),
             nn.BatchNorm2d(self.nf * 2),
-            nn.LeakyReLU(0.1, inplace=True),
+            #nn.LeakyReLU(0.1, inplace=True),
+            nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf * 2) x 56 x 56
             nn.ConvTranspose2d(in_channels=self.nf * 2,
@@ -69,9 +74,10 @@ class Generator(nn.Module):
                                kernel_size=4,
                                stride=2,
                                padding=1,
-                               bias=True),
+                               bias=False),
             nn.BatchNorm2d(self.nf),
-            nn.LeakyReLU(0.1, inplace=True),
+            #nn.LeakyReLU(0.1, inplace=True),
+            nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf) x 112 x 112
             nn.ConvTranspose2d(in_channels=self.nf,
@@ -79,7 +85,7 @@ class Generator(nn.Module):
                                kernel_size=4,
                                stride=2,
                                padding=1,
-                               bias=True),
+                               bias=False),
             nn.Tanh()
             # state size: b x (nc) x 224 x 224
         )
@@ -99,26 +105,37 @@ class Text2Image(nn.Module):
         self.tokenizer = transformers.DistilBertTokenizer.from_pretrained(txt2im_model_args["encoder_args"]["name"])
         self.bert_embed_dim = self.bert.config.hidden_size  # bert's output size
         # We need to add noise so the generator will be able to create multiple images for the same text
-        self.noise_dim = int(np.round(self.bert_embed_dim * txt2im_model_args["noise_dim_percent"]))
         self.linear_out = txt2im_model_args["linear_out_dim"]
+        self.noise_dim = int(np.round(self.linear_out * txt2im_model_args["noise_dim_percent"]))
         self.txt_max_len = txt_max_len
         self.linear = nn.Linear(self.bert_embed_dim, self.linear_out)
         # The generator input will be a concatenation of bert's embedding + the noise
         self.generator = Generator(txt2im_model_args["generator_args"],
                                    self.noise_dim + self.linear_out * self.txt_max_len)
+        
+        for param in self.bert.parameters():
+            param.requires_grad = False
 
     def forward(self, x, fixed_noise=None):
+        #print(f'tokenizer:{x}')
+        #print(x.sum())
         x = self.bert(x)
         x = x.last_hidden_state
+        #print(f'berts: {x}')
+        #print(x.sum())
         x = self.linear(x)
-        print(x)
+        #print(f'lin: {x}')
+        #print(f'linsum: {x.sum()}')
 
         if fixed_noise is None:
             # Here we're only creating the noise that would be later concatenated to the embedding
             noise = torch.rand((x.shape[0], self.noise_dim, 1, 1))
         else:
             noise = fixed_noise
-        return self.generator(noise.to(self.device), x)
+            
+        #print(f'linshape: {x.shape} \tnoiseshape:{noise.shape}')
+        #print(f'~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~')
+        return self.generator(noise.to(self.device), x)        
 
     def decode_text(self, ids):
         return self.tokenizer.batch_decode(ids, skip_special_tokens=True)  # [0]
