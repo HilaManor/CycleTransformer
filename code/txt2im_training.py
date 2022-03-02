@@ -10,6 +10,9 @@ from torchvision import transforms
 from losses import GramLoss
 import matplotlib.pyplot as plt
 
+plt.switch_backend('agg')
+
+
 def train(args, dataset, device):
     with open(os.path.join(args["output_dir"], 'log.txt'), 'w') as fp:
         pprint.pprint(args, fp)
@@ -45,7 +48,7 @@ def train(args, dataset, device):
             txt2im_recon_loss = txt2im_recon_criterion(im, im_gt)
 
             #print(f'style:{txt2im_style_loss}\t{txt2im_recon_loss}')
-            txt2im_loss = txt2im_style_loss + (args["txt2im_model_args"]["alpha"] * txt2im_recon_loss)
+            txt2im_loss = txt2im_recon_loss + (args["txt2im_model_args"]["alpha"] * txt2im_style_loss)
 
             txt2im_optimizer.zero_grad()  # zero the parameter gradients
             txt2im_loss.backward()  # backpropagation
@@ -74,13 +77,16 @@ def train(args, dataset, device):
             fp.write(logline + '\n')
 
         if epoch % args["val_epochs"] == 0:
-            txt2im_running_loss = calc_metrics(txt2im_model, txt2im_criterion, valid_loader, device)
-            logline = f"VALIDATION - Epoch: {epoch}/{args['epochs']} | Txt2Im Loss: {txt2im_running_loss:.4f}" 
+            txt2im_running_loss = calc_metrics(txt2im_model, txt2im_criterion, txt2im_recon_criterion, valid_loader, args["txt2im_model_args"]["alpha"], os.path.join(args["output_dir"], 'valid_ims'), epoch, device)
+            logline = f"VALIDATION - Epoch: {epoch}/{args['epochs']} | Txt2Im Loss: {txt2im_running_loss:.4g}" 
             print(logline)
             with open(os.path.join(args["output_dir"], 'log.txt'), 'a') as fp:
                 fp.write(logline + '\n')      
             
             torch.save({'txt2im': txt2im_model.state_dict(),
+                        'optimizer': txt2im_optimizer.state_dict(),
+                        'epochs': epoch,
+                        'losses': losses,
                         'args': args}, os.path.join(args["output_dir"], f'models_e{epoch}.pth'))
             print(f"SAVED CHECKPOINT at {os.path.join(args['output_dir'], f'models_e{epoch}.pth')}")
             
@@ -116,24 +122,56 @@ def train(args, dataset, device):
     plt.savefig(os.path.join(args["output_dir"], 'losses.png'))
     
     torch.save({'txt2im': txt2im_model.state_dict(),
+                'optimizer': txt2im_optimizer.state_dict(),
+                'epochs': epoch,
+                'losses': losses,
                 'args': args}, os.path.join(args["output_dir"], 'models.pth'))
     print(f"SAVED FINAL MODEL at {os.path.join(args['output_dir'], 'models.pth')}")
     
 
 
-def calc_metrics(txt2im_model, txt2im_crit, dataloader, device):
+def calc_metrics(txt2im_model, txt2im_crit_style, txt2im_crit_recon, dataloader, alpha, out_dir, epoch, device):
     txt2im_model.eval()
     txt2im_running_loss = 0.0
+    
+    os.makedirs(out_dir, exist_ok=True)
+    
     with torch.no_grad():
-        for i, (im, txt_tokens, _, _, _) in enumerate(dataloader):
+        for i, (im, txt_tokens, _, im_idx, txt_idx) in enumerate(dataloader):
             # text to image
             txt_tokens = txt_tokens.to(device)
             im_gt = im.to(device)
             im = txt2im_model(txt_tokens)
     
-            txt2im_loss = txt2im_crit(im, im_gt)
+            
+            txt2im_style_loss = txt2im_crit_style(im, im_gt)
+            txt2im_recon_loss = txt2im_crit_recon(im, im_gt)
+            
+            txt2im_loss = txt2im_recon_loss + (alpha * txt2im_style_loss)
             txt2im_running_loss += txt2im_loss.data.item()
-                        
+            
+            if i == 0:
+                deTensor = transforms.ToPILImage()
+                gen_im = [deTensor(x) for x in im.detach().cpu()]
+                gt_im = [deTensor(x) for x in im_gt.detach().cpu()]
+                txt_tokens[txt_tokens == -100] = txt2im_model.tokenizer.pad_token_id 
+                gt_sentence = txt2im_model.decode_text(txt_tokens)
+                
+                for j in range(len(gen_im)):
+                    plt.figure()
+                    plt.subplot(1,2,1)
+                    plt.imshow(gen_im[j])
+                    plt.title('Generated Image')
+    
+                    plt.subplot(1, 2, 2)
+                    plt.imshow(gt_im[j])
+                    plt.title('Ground Truth Image')
+                    
+                    plt.suptitle(f'GT: {gt_sentence[j]}', wrap=True)
+                    plt.savefig(os.path.join(out_dir,
+                                             f"im{im_idx[j]:05}_sen{txt_idx[j]}_e{epoch}.png"))
+                    plt.close('all')
+                
             # Memory cleanup
             del im_gt, txt2im_loss, txt_tokens, im
             torch.cuda.empty_cache()

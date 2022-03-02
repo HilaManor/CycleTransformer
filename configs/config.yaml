@@ -3,14 +3,14 @@ db_path: '../databases/102flowers'
 db_type: 'flowers'
 
 training_args:
-  batch_size: 12
+  batch_size: 3
   txt_max_len: 30
-  learning_rate: 1e-4 #1e-5
-  test_percent: 0.2
-  val_percent: 0.2
+  learning_rate: 1e-3 #1e-5
+  test_percent: 0.98
+  val_percent: 0.01
 
 txt2im_model_args:
-  alpha: 0.001
+  alpha: 10000
   noise_dim_percent: 0.2
   generator_args:
     nf: 64

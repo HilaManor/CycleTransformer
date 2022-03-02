@@ -31,7 +31,7 @@ if __name__ == '__main__':
     utils.set_seed(42)
 
     if args['db_type'] == 'flowers':
-        transformations = transforms.Compose([transforms.Resize((64,64)),#transforms.Resize((224,224)),
+        transformations = transforms.Compose([transforms.Resize((224,224)),#transforms.Resize((224,224)),
                                               transforms.ToTensor()])
         dataset = ImageCaption102FlowersDataset(args, transformations)
     else:
@@ -43,4 +43,4 @@ if __name__ == '__main__':
     print(f"Using {device}")
 
     training.train(args, dataset, device)
-    generating.generate(args, dataset, device)
+    #generating.generate(args, dataset, device)

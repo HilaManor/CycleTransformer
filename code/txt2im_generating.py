@@ -48,13 +48,7 @@ def generate(args, dataset, device):
                 plt.imshow(gt_im[j])
                 plt.title('Ground Truth Image')
                 
-                
-                
-                
-                pair_idx = i * args["training_args"]["batch_size"] + j
-                #suptitle = plt.suptitle("\n".join(wrap(f'GT: {gt_sentence[j]}', 60)))
                 plt.suptitle(f'GT: {gt_sentence[j]}', wrap=True)
-                #suptitile.set_y(1.05)
                 plt.savefig(os.path.join(gens_dir,
                                          f"im{im_idx[j]:05}_sen{txt_idx[j]}.png"))
                 plt.close('all')
