@@ -21,13 +21,13 @@ def train(args, dataset, device):
 
     train_loader, valid_loader, test_loader = data_utils.get_loaders(args, dataset)
 
-    txt2im_optimizer = torch.optim.Adam(txt2im_model.parameters(), lr=float(args["training_args"]["learning_rate"]))
-    im2txt_optimizer = torch.optim.Adam(im2txt_model.parameters(), lr=float(args["training_args"]["learning_rate"]))
+    txt2im_optimizer = torch.optim.Adam(txt2im_model.parameters(), lr=float(args["txt2im_model_args"]["learning_rate"]))
+    im2txt_optimizer = torch.optim.Adam(im2txt_model.parameters(), lr=float(args["im2txt_model_args"]["learning_rate"]))
 
     txt2im_recon_criterion = nn.MSELoss()
     txt2im_criterion = GramLoss(device=device)
     #im2txt_criterion = nn.MSELoss()
-    #im2txt_criterion = nn.CrossEntropyLoss()  # ?????
+    #im2txt_criterion = nn.CrossEntropyLoss()
 
     print(" ------------------------ STARTING TRAINING SUCCESS ERROR WARNING NONE None ------------------------ ")
     deTensor = transforms.ToPILImage()
@@ -44,6 +44,34 @@ def train(args, dataset, device):
         txt2im_recon_running_loss = 0.0
         txt2im_style_running_loss = 0.0
         epoch_time = time.time()
+        
+        for k in range(1, args["txt2im_model_args"]["g_step"]):
+            for im, txt_tokens, _, _, _ in tqdm(train_loader):
+                # text to image
+                txt_tokens = txt_tokens.to(device)
+                im_gt = im.to(device)
+                im = txt2im_model(txt_tokens)
+    
+                txt2im_style_loss = txt2im_criterion(im, im_gt)
+                txt2im_recon_loss = txt2im_recon_criterion(im, im_gt)
+    
+                txt2im_loss = txt2im_recon_loss + (args["txt2im_model_args"]["alpha"] * txt2im_style_loss)
+    
+                txt2im_optimizer.zero_grad()  # zero the parameter gradients
+                txt2im_loss.backward()  # backpropagation
+                txt2im_optimizer.step()  # update parameters
+                
+                # Memory cleanup
+                del im_gt, im, txt2im_loss, txt_tokens, txt2im_style_loss, txt2im_recon_loss
+                torch.cuda.empty_cache()
+                
+            torch.save({'txt2im': txt2im_model.state_dict(),
+                        'optimizer_txt2im': txt2im_optimizer.state_dict(),
+                        'epochs': epoch,
+                        'k': k, 
+                        'args': args}, os.path.join(args["output_dir"], f'generator_k{k}.pth'))               
+            print(f"Finished {k}/{args['txt2im_model_args']['g_step'] - 1} iterartion in g-step") 
+            
         for i, (im, txt_tokens, masked_txt_tokens, _, _) in enumerate(tqdm(train_loader)):
             # text to image
             txt_tokens = txt_tokens.to(device)
@@ -123,7 +151,8 @@ def train(args, dataset, device):
             
             torch.save({'txt2im': txt2im_model.state_dict(),
                         'im2txt': im2txt_model.state_dict(),
-                        'optimizer': txt2im_optimizer.state_dict(),
+                        'optimizer_txt2im': txt2im_optimizer.state_dict(),
+                        'optimizer_im2txt': im2txt_optimizer.state_dict(),
                         'epochs': epoch,
                         'losses': losses,
                         'args': args}, os.path.join(args["output_dir"], f'models_e{epoch}.pth'))
@@ -168,7 +197,8 @@ def train(args, dataset, device):
     
     torch.save({'txt2im': txt2im_model.state_dict(),
                 'im2txt': im2txt_model.state_dict(),
-                'optimizer': txt2im_optimizer.state_dict(),
+                'optimizer_txt2im': txt2im_optimizer.state_dict(),
+                'optimizer_im2txt': im2txt_optimizer.state_dict(),
                 'epochs': epoch,
                 'losses': losses,
                 'args': args}, os.path.join(args["output_dir"], 'models.pth'))
@@ -204,16 +234,16 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
             torch.cuda.empty_cache()
             
             masked_txt_tokens = masked_txt_tokens.to(device)
-            gen_tokens = im2txt_model(im, gt_labels=masked_txt_tokens)
-    
-            im2txt_loss = gen_tokens.loss
+            im2txt_loss = im2txt_model(im, gt_labels=masked_txt_tokens).loss
             im2txt_running_loss += im2txt_loss.data.item()
             
-            if i == 0:
+            if i == 0 or i == 1 or i == 2 or i == 3:
                 txt_tokens[txt_tokens == -100] = txt2im_model.tokenizer.pad_token_id 
                 gt_sentence = txt2im_model.decode_text(txt_tokens)
+                gen_tokens = im2txt_model.generate(im)
                 gen_sentence = im2txt_model.decode_text(gen_tokens)
                 gen_sentence = [s.strip() for s in gen_sentence]
+                
                 for j in range(len(im)):
                     plt.figure()
                     plt.subplot(1,2,1)
