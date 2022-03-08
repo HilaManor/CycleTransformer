@@ -11,6 +11,8 @@ from losses import GramLoss
 import matplotlib.pyplot as plt
 
 plt.switch_backend('agg')
+torch.autograd.set_detect_anomaly(True)
+
 
 def train(args, dataset, device):
     with open(os.path.join(args["output_dir"], 'log.txt'), 'w') as fp:
@@ -84,14 +86,14 @@ def train(args, dataset, device):
             txt2im_loss = txt2im_recon_loss + (args["txt2im_model_args"]["alpha"] * txt2im_style_loss)
 
             txt2im_optimizer.zero_grad()  # zero the parameter gradients
-            txt2im_loss.backward()  # backpropagation
-            txt2im_optimizer.step()  # update parameters
+            txt2im_loss.backward(retain_graph=True)  # backpropagation
 
             txt2im_running_loss += txt2im_loss.data.item()
             txt2im_recon_running_loss += txt2im_recon_loss.data.item()
             txt2im_style_running_loss += txt2im_style_loss.data.item()
             
-            im = [deTensor(x) for x in im.detach().cpu()]
+            #im = [deTensor(x) for x in im.detach().cpu()]
+            im = [x for x in im]
             # Memory cleanup
             del im_gt, txt2im_loss, txt_tokens, txt2im_style_loss, txt2im_recon_loss
             torch.cuda.empty_cache()
@@ -112,6 +114,7 @@ def train(args, dataset, device):
             #     print(f'{x}: {p.requires_grad}')
             im2txt_optimizer.zero_grad()  # zero the parameter gradients
             im2txt_loss.backward()  # backpropagation
+            txt2im_optimizer.step()  # update parameters
             im2txt_optimizer.step()  # update parameters
 
             im2txt_running_loss += im2txt_loss.data.item()
@@ -227,7 +230,7 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
             txt2im_loss = txt2im_recon_loss + (alpha * txt2im_style_loss)
             txt2im_running_loss += txt2im_loss.data.item()
             
-            im = [deTensor(x) for x in im.detach().cpu()]
+            im = [x for x in im]
             im_gt = [deTensor(x) for x in im_gt.detach().cpu()]
             # Memory cleanup
             del txt2im_style_loss, txt2im_recon_loss, txt2im_loss #, txt_tokens
@@ -247,7 +250,7 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
                 for j in range(len(im)):
                     plt.figure()
                     plt.subplot(1,2,1)
-                    plt.imshow(im[j])
+                    plt.imshow(deTensor(im[j]))
                     plt.title('Generated Image')
     
                     plt.subplot(1, 2, 2)

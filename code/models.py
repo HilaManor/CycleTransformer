@@ -20,7 +20,7 @@ class Generator(nn.Module):
                                stride=1,
                                padding=0,
                                bias=False),
-            nn.BatchNorm2d(self.nf * 32),
+            nn.GroupNorm(8, self.nf * 32),
             #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
@@ -31,7 +31,7 @@ class Generator(nn.Module):
                                stride=2,
                                padding=1,
                                bias=False),
-            nn.BatchNorm2d(self.nf * 16),
+            nn.GroupNorm(8, self.nf * 16),
             #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
@@ -42,7 +42,7 @@ class Generator(nn.Module):
                                stride=2,
                                padding=1,
                                bias=False),
-            nn.BatchNorm2d(self.nf * 8),
+            nn.GroupNorm(8, self.nf * 8),
             #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
@@ -53,7 +53,7 @@ class Generator(nn.Module):
                                stride=2,
                                padding=1,
                                bias=False),
-            nn.BatchNorm2d(self.nf * 4),
+            nn.GroupNorm(8, self.nf * 4),
             #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
@@ -64,7 +64,7 @@ class Generator(nn.Module):
                                stride=2,
                                padding=1,
                                bias=False),
-            nn.BatchNorm2d(self.nf * 2),
+            nn.GroupNorm(8, self.nf * 2),
             #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
@@ -75,7 +75,7 @@ class Generator(nn.Module):
                                stride=2,
                                padding=1,
                                bias=False),
-            nn.BatchNorm2d(self.nf),
+            nn.GroupNorm(8, self.nf),
             #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
             # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
@@ -149,7 +149,7 @@ class Image2Text(nn.Module):
                                                                                      im2txt_model_args["decoder_name"])
         # model = DeiTModel.from_pretrained("facebook/deit-base-distilled-patch16-224",
         #                                          add_pooling_layer=False)
-        self.feature_extractor = DeiTFeatureExtractor.from_pretrained(im2txt_model_args["encoder_name"])
+        self.feature_extractor = DeiTFeatureExtractor.from_pretrained(im2txt_model_args["encoder_name"], do_resize=False, do_center_crop=False, do_normalize=False)
         self.tokenizer = AutoTokenizer.from_pretrained(im2txt_model_args["decoder_name"], use_fast=True)
         
         # set special tokens used for creating the decoder_input_ids from the labels
@@ -168,6 +168,7 @@ class Image2Text(nn.Module):
         # config_decoder.add_cross_attention = True
 
     def forward(self, x, gt_labels):
+        #print(f'type of x: {type(x)}')
         x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze().to(self.device)
         x = self.vis_enc_dec(pixel_values=x, labels=gt_labels)
         #x = self.vis_enc_dec.generate(x, max_length=self.txt_max_len)
