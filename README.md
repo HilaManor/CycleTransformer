@@ -75,7 +75,7 @@ The Image-to-text model is an encoder decoder structure composed of distill DeiT
 
 Read our short paper for more detailes about the model. 
 
-![image](https://github.com/HilaManor/CycleTransformer/main/images/model.png)
+![model](https://user-images.githubusercontent.com/63591190/157965275-6a900647-f0ad-4421-b799-df3a00d835ed.png)
 
 ## Team
 Hila Manor and Matan Kleiner
