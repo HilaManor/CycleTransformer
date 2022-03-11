@@ -68,7 +68,10 @@ Use `--help` for more information on the parameters.
 
 ## Model 
 CycleTransformer model is comprised of Text-to-Image and Image-to-Text parts.
-The Text-to-Image model is comprised of distill BERT for text embedding. We concatenate a random noise vector sampled from the standard normal distributed to this embedding vector. The size of the noise vector is $20\%$ of the size of the embedding vector. We feed the concatenated vector to an image generator model. The generator model is based on DCGAN's generator 
+The Text-to-Image model is comprised of distill BERT for text embedding. We concatenate a random noise vector sampled from the standard normal distributed to this embedding and then feed it to an image generator model. The Text-to-Image model is trained using perceptaul and reconstruction loss. 
+The Image-to-text model is an encoder decoder structure composed of distill DeiT model for features extractor and a GPT2 for text generation. This model is trained using language modelling loss. 
+Read our short paper for more detailes about the model. 
+
 
 ## Team
 Hila Manor and Matan Kleiner
