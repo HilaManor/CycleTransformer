@@ -12,6 +12,7 @@ from PIL import Image
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 class ImageCaption102FlowersDataset(Dataset):
     """Custom 102 flowers dataset
 
@@ -21,17 +22,17 @@ class ImageCaption102FlowersDataset(Dataset):
 
     variables:
     flowers_path, imgs_path, txts_path - path to data
-    BERT_tokenizer, GPT2tokenizer - tokenizer for transformer model
-    feature_extractor - feature extractor for vision transformer model
+    BERT_tokenizer, GPT2tokenizer - tokenizers for the transformer models
+    feature_extractor - feature extractor for the vision transformer model
     txt_max_len - the max length of an input sentence
-    transform - transformation for an input image
+    transform - transformation to apply on the input images
     """
 
     def __init__(self, args, transform=None):
         """Create a dataset object
 
         :param args: a dictionary containing configuration parameters for the entire model.
-        :param transform: transformation for an input image
+        :param transform: transformation to apply on the input images
         """
         self.flowers_path = args["db_path"]
         self.BERT_tokenizer = DistilBertTokenizer.from_pretrained(args["txt2im_model_args"]["encoder_args"]["name"])
@@ -62,14 +63,14 @@ class ImageCaption102FlowersDataset(Dataset):
 
         # prepare image (i.e. resize + normalize)
         txt2im_labels = self.BERT_tokenizer(txt, padding="max_length", truncation=True,
-                                     max_length=self.txt_max_len, return_tensors="pt").input_ids.squeeze()
+                                            max_length=self.txt_max_len, return_tensors="pt").input_ids.squeeze()
 
         im2txt_labels = self.GPT2tokenizer(txt, padding="max_length", truncation=True,
-                                     max_length=self.txt_max_len, return_tensors="pt").input_ids.squeeze()
+                                           max_length=self.txt_max_len, return_tensors="pt").input_ids.squeeze()
 
-        
         # important: make sure that PAD tokens are ignored by the loss function
-        im2txt_masked_labels = torch.tensor([label if label != self.GPT2tokenizer.pad_token_id else -100 for label in im2txt_labels])
+        im2txt_masked_labels = torch.tensor([label if label != self.GPT2tokenizer.pad_token_id else -100
+                                             for label in im2txt_labels])
 
         if self.transform:
             im = self.transform(im)
