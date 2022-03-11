@@ -41,7 +41,6 @@ The code was tested on python v3.8.12 with the following libraries:
 ```
 ├── code - the code for training the CycleTransformer model
 ├── config - configurations for the CycleTransformer model
-├── images - images used in this repository 
 ├── short_paper - short paper in ACL format describing the CycleTransformer model 
 ```
 
