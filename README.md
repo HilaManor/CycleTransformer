@@ -41,7 +41,6 @@ The code was tested on python v3.8.12 with the following libraries:
 ```
 ├── code - the code for training the CycleTransformer model
 ├── config - configurations for the CycleTransformer model
-├── images - images used in this repository 
 ├── short_paper - short paper in ACL format describing the CycleTransformer model 
 ```
 
@@ -75,6 +74,7 @@ The Image-to-text model is an encoder decoder structure composed of distill DeiT
 
 Read our short paper for more detailes about the model. 
 
+![model](https://user-images.githubusercontent.com/63591190/157965275-6a900647-f0ad-4421-b799-df3a00d835ed.png)
 
 ## Team
 Hila Manor and Matan Kleiner
