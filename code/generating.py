@@ -18,7 +18,7 @@ import utils
 
 
 def generate(args, dataset, device):
-    """Generate new image and sentences from the trained model
+    """Generate new images and sentences from the trained model, on the test split
 
     :param args: a dictionary containing configuration parameters for the entire model.
     :param dataset: a dataset to use for generating
@@ -71,7 +71,7 @@ def generate(args, dataset, device):
             for j in range(len(gen_im)):
                 print(repr(gen_sentence[j]))
                 plt.figure()
-                plt.subplot(1,2,1)
+                plt.subplot(1, 2, 1)
                 plt.imshow(gen_im[j])
                 plt.title('Generated Image')
 
@@ -79,18 +79,16 @@ def generate(args, dataset, device):
                 plt.imshow(gt_im[j])
                 plt.title('Ground Truth Image')
 
-                pair_idx = i * args["training_args"]["batch_size"] + j
                 plt.suptitle(f'GT: {gt_sentence[j]}\nGen: {gen_sentence[j]}')
                 plt.savefig(os.path.join(gens_dir,
                                          f"im{im_idx[j]:05}_sen{txt_idx[j]}.png"))
                 plt.close('all')
 
-            
-            
+
 if __name__ == '__main__':
     # ----- Creating Argument Parser -----
     parser = argparse.ArgumentParser('CycleTransformer Generator Only')
-    parser.add_argument('--out_dir', required=True, type=str, help='***')
+    parser.add_argument('--out_dir', required=True, type=str, help='A directory of a trained model to generate for')
     parsed_args = parser.parse_args()
 
     # define device
@@ -105,7 +103,7 @@ if __name__ == '__main__':
 
     # create dataset
     if args['db_type'] == 'flowers':
-        transformations = transforms.Compose([transforms.Resize((224,224)),
+        transformations = transforms.Compose([transforms.Resize((224, 224)),
                                               transforms.ToTensor()])
         dataset = ImageCaption102FlowersDataset(args, transformations)
     else:
