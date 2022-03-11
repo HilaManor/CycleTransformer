@@ -3,15 +3,14 @@ db_path: '../databases/102flowers'
 db_type: 'flowers'
 
 training_args:
-  batch_size: 20
+  batch_size: 12
   txt_max_len: 30
-  learning_rate: 1e-3 #1e-5
   test_percent: 0.1
   val_percent: 0.1
 
 txt2im_model_args:
   alpha: 10000 
-  learning_rate: 1e-3
+  learning_rate: 5e-3
   noise_dim_percent: 0.2
   g_step: 10
   generator_args:
@@ -28,4 +27,4 @@ im2txt_model_args:
   encoder_name: 'facebook/deit-small-distilled-patch16-224'
   #decoder_name: 'distilgpt2'
   decoder_name: 'gpt2'
-  learning_rate: 1e-5
+  learning_rate: 0.5e-5

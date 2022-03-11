@@ -14,7 +14,7 @@ def _gen_unique_out_dir_path(args):
     """
 
     base_out = args['output_dir']
-    possible_name = f"{args['db_type']}_e{args['epochs']}_lr{args['training_args']['learning_rate']}"
+    possible_name = f"{args['db_type']}_e{args['epochs']}"
     possible_path = os.path.join(base_out, possible_name)
 
     if os.path.exists(possible_path):

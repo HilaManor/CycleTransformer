@@ -129,7 +129,7 @@ class Text2Image(nn.Module):
 
         if fixed_noise is None:
             # Here we're only creating the noise that would be later concatenated to the embedding
-            noise = torch.rand((x.shape[0], self.noise_dim, 1, 1))
+            noise = torch.randn((x.shape[0], self.noise_dim, 1, 1))
         else:
             noise = fixed_noise
             
@@ -149,7 +149,9 @@ class Image2Text(nn.Module):
                                                                                      im2txt_model_args["decoder_name"])
         # model = DeiTModel.from_pretrained("facebook/deit-base-distilled-patch16-224",
         #                                          add_pooling_layer=False)
-        self.feature_extractor = DeiTFeatureExtractor.from_pretrained(im2txt_model_args["encoder_name"], do_resize=False, do_center_crop=False, do_normalize=False)
+        self.feature_extractor = DeiTFeatureExtractor.from_pretrained(im2txt_model_args["encoder_name"], do_resize=False, do_center_crop=False)  #, do_normalize=False)
+        self.feature_extractor.image_mean = torch.tensor(self.feature_extractor.image_mean).to(device)
+        self.feature_extractor.image_std = torch.tensor(self.feature_extractor.image_std).to(device)
         self.tokenizer = AutoTokenizer.from_pretrained(im2txt_model_args["decoder_name"], use_fast=True)
         
         # set special tokens used for creating the decoder_input_ids from the labels
