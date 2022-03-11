@@ -1,4 +1,4 @@
-"""Training and ???? functions for the model
+"""Training functions for the model
 
 function train - train the entire model
 function calc_metrics - evaluate the model during training loop
