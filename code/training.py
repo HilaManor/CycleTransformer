@@ -42,16 +42,16 @@ def train(args, dataset, device):
     # get train, valid and test data loaders
     train_loader, valid_loader, test_loader = data_utils.get_loaders(args, dataset)
 
-    # define optimizer for txt2im and for im2txt
+    # define optimizers for txt2im and for im2txt
     txt2im_optimizer = torch.optim.Adam(txt2im_model.parameters(), lr=float(args["txt2im_model_args"]["learning_rate"]))
     im2txt_optimizer = torch.optim.Adam(im2txt_model.parameters(), lr=float(args["im2txt_model_args"]["learning_rate"]))
 
-    # define criterion for txt2im
+    # define a criterion for the txt2im model
     txt2im_recon_criterion = nn.MSELoss()
     txt2im_criterion = GramLoss(device=device)
 
     print(" ------------------------ STARTING TRAINING ------------------------ ")
-    #deTensor = transforms.ToPILImage()
+    # deTensor = transforms.ToPILImage()
     losses = {'im2txt_running_loss': [],
               'txt2im_running_loss': [],
               'txt2im_recon_running_loss': [],
@@ -66,7 +66,7 @@ def train(args, dataset, device):
         txt2im_style_running_loss = 0.0
         epoch_time = time.time()
         
-        # first do g_step iteration of **just** txt2im model to give the image generator a head start
+        # first do g_step iterations of **just** txt2im model to give the image generator a head start
         # because the image generator is the only part we train from scratch
         for k in range(1, args["txt2im_model_args"]["g_step"]):
             for im, txt_tokens, _, _, _ in tqdm(train_loader):
@@ -112,7 +112,7 @@ def train(args, dataset, device):
             txt2im_recon_running_loss += txt2im_recon_loss.data.item()
             txt2im_style_running_loss += txt2im_style_loss.data.item()
             
-            #im = [deTensor(x) for x in im.detach().cpu()]
+            # im = [deTensor(x) for x in im.detach().cpu()]
             im = [x for x in im]
             # Memory cleanup
             del im_gt, txt2im_loss, txt_tokens, txt2im_style_loss, txt2im_recon_loss
@@ -178,39 +178,32 @@ def train(args, dataset, device):
 
             # create graph for losses
             plt.figure()
-            plt.subplot(2,2,1)
+            plt.subplot(2, 2, 1)
             plt.plot(list(range(1, epoch + 1)), losses['txt2im_running_loss'])
             plt.title('Txt2Im Loss')
-            plt.subplot(2,2,2)
+            plt.subplot(2, 2, 2)
             plt.plot(list(range(1, epoch + 1)), losses['im2txt_running_loss'])
             plt.title('Im2Txt Loss')
-            plt.subplot(2,2,3)
+            plt.subplot(2, 2, 3)
             plt.plot(list(range(1, epoch + 1)), losses['txt2im_recon_running_loss'])
             plt.title('Txt2Im Recon Loss')
-            plt.subplot(2,2,4)
+            plt.subplot(2, 2, 4)
             plt.plot(list(range(1, epoch + 1)), losses['txt2im_style_running_loss'])
             plt.title('Txt2Im Style Loss')
             plt.savefig(os.path.join(args["output_dir"], 'losses.png'))
-      
-    #txt2im_running_loss, im2txt_running_loss = calc_metrics(txt2im_model, im2txt_model, txt2im_criterion,
-    #                                                        im2txt_criterion, test_loader, device)
-    #logline = f"TEST - Txt2Im Loss: {txt2im_running_loss:.4f} | Im2Txt Loss: {im2txt_running_loss:.4f}"
-    #print(logline)
-    #    with open(os.path.join(args["output_dir"], 'log.txt'), 'a') as fp:
-    #        fp.write(logline + '\n')
 
     # create graph for losses and save the model after training has complete
     plt.figure()
-    plt.subplot(2,2,1)
+    plt.subplot(2, 2, 1)
     plt.plot(list(range(1, args["epochs"] + 1)), losses['txt2im_running_loss'])
     plt.title('Txt2Im Loss')
-    plt.subplot(2,2,2)
+    plt.subplot(2, 2, 2)
     plt.plot(list(range(1, args["epochs"] + 1)), losses['im2txt_running_loss'])
     plt.title('Im2Txt Loss')
-    plt.subplot(2,2,3)
+    plt.subplot(2, 2, 3)
     plt.plot(list(range(1, args["epochs"] + 1)), losses['txt2im_recon_running_loss'])
     plt.title('Txt2Im Recon Loss')
-    plt.subplot(2,2,4)
+    plt.subplot(2, 2, 4)
     plt.plot(list(range(1, args["epochs"] + 1)), losses['txt2im_style_running_loss'])
     plt.title('Txt2Im Style Loss')
     plt.savefig(os.path.join(args["output_dir"], 'losses.png'))
@@ -223,7 +216,6 @@ def train(args, dataset, device):
                 'losses': losses,
                 'args': args}, os.path.join(args["output_dir"], 'models.pth'))
     print(f"SAVED FINAL MODEL at {os.path.join(args['output_dir'], 'models.pth')}")
-    
 
 
 def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_recon, 
@@ -234,11 +226,11 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
     :param im2txt_model: the im2txt model
     :param txt2im_crit_style: txt2im style criterion
     :param txt2im_crit_recon: txt2im reconstruction criterion
-    :param dataloader: data loader for loading the data
+    :param dataloader: data loader to validate for
     :param alpha: txt2im criterion hyperparameter
-    :param out_dir: dir for generated images
-    :param epoch: epoch's number
-    :param device: device to use
+    :param out_dir: dir for outputting the generated images
+    :param epoch: epoch number
+    :param device: current device
     :return: txt2im_running_loss, im2txt_running_loss - the model's validation losses
     """
     # put the models on eval mode
@@ -265,7 +257,7 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
             im = [x for x in im]
             im_gt = [deTensor(x) for x in im_gt.detach().cpu()]
             # Memory cleanup
-            del txt2im_style_loss, txt2im_recon_loss, txt2im_loss #, txt_tokens
+            del txt2im_style_loss, txt2im_recon_loss, txt2im_loss
             torch.cuda.empty_cache()
             
             masked_txt_tokens = masked_txt_tokens.to(device)
@@ -282,7 +274,7 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
                 
                 for j in range(len(im)):
                     plt.figure()
-                    plt.subplot(1,2,1)
+                    plt.subplot(1, 2, 1)
                     plt.imshow(deTensor(im[j]))
                     plt.title('Generated Image')
     
