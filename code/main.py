@@ -6,7 +6,6 @@ Matan Kleiner & Hila Manor
 import argparse
 import yaml
 import training
-import generating
 import utils
 import torch
 from FlowersDataset import ImageCaption102FlowersDataset
@@ -25,6 +24,7 @@ if __name__ == '__main__':
                         help='Path to YAML config file. Default: config.yaml')
     parsed_args = parser.parse_args()
 
+    # This type of loading gives precedence to the parser arguments
     with open(parsed_args.config) as f:
         args = yaml.load(f, Loader=yaml.FullLoader)
     args.update(vars(parsed_args))
@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     # create dataset
     if args['db_type'] == 'flowers':
-        transformations = transforms.Compose([transforms.Resize((224,224)),#transforms.Resize((224,224)),
+        transformations = transforms.Compose([transforms.Resize((224, 224)),
                                               transforms.ToTensor()])
         dataset = ImageCaption102FlowersDataset(args, transformations)
     else:
@@ -46,4 +46,3 @@ if __name__ == '__main__':
     print(f"Using {device}")
 
     training.train(args, dataset, device)
-    #generating.generate(args, dataset, device)

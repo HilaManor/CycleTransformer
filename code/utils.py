@@ -1,4 +1,4 @@
-"""Utility functions
+"""General utility functions
 
 function _gen_unique_out_dir_path - generate a unique name for each new out dir
 function create_output_dir - create a new output dir
@@ -14,10 +14,11 @@ import numpy as np
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 def _gen_unique_out_dir_path(args):
     """Generates unique name for a new file, to avoid override.
 
-    :param args: The current configuration of the test.
+    :param args: a dictionary containing configuration parameters for the entire model.
     :return: string of the possible path, with important data from args.
     """
 
@@ -46,13 +47,13 @@ def create_output_dir(args):
 
     :param args: a dictionary containing configuration parameters for the entire model.
     """
-    outpath = _gen_unique_out_dir_path(args)
-    args['output_dir'] = outpath
-    os.makedirs(outpath)
+    out_path = _gen_unique_out_dir_path(args)
+    args['output_dir'] = out_path
+    os.makedirs(out_path)
 
 
 def set_seed(seed=42):
-    """Set a seed for reproducibility using python, numpy and pytorch methods
+    """Sets a seed for reproducibility using python, numpy, huggingface and pytorch methods
 
     :param seed: the seed number
     """

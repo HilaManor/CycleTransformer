@@ -9,18 +9,22 @@ from torch.utils.data import random_split, DataLoader
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 def get_loaders(args, dataset):
-    """Create torch data loader from a given dataset
+    """Create torch data loaders from a given dataset
 
     :param args: a dictionary containing configuration parameters for the entire model.
-    :param dataset: create a data loader from this dataset
-    :return: train, valid and test data loader
+    :param dataset: the dataset to create a data loaders for
+    :return: train, valid and test data loaders
     """
     train_dataset, valid_dataset, test_dataset = get_split_datasets(args, dataset)
 
-    train_loader = DataLoader(train_dataset, batch_size=args["training_args"]["batch_size"], shuffle=True, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=args["training_args"]["batch_size"], shuffle=False, drop_last=True)
-    test_loader = DataLoader(test_dataset, batch_size=args["training_args"]["batch_size"], shuffle=False, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=args["training_args"]["batch_size"], shuffle=True,
+                              drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=args["training_args"]["batch_size"], shuffle=False,
+                              drop_last=True)
+    test_loader = DataLoader(test_dataset, batch_size=args["training_args"]["batch_size"], shuffle=False,
+                             drop_last=True)
 
     return train_loader, valid_loader, test_loader
 
