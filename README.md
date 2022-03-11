@@ -9,9 +9,9 @@
 
 **Insert Image**
 
-Both Text-to-Image translation and Image-to-Text translation have been an active area of research in the recent past[5,6,7]. Both tasks are difficult and interesting problems to solve: The Image-to-Text task demands that the generated caption will faithfully describe the image, while the Text-to-Image task demands that the generated image should be a faithful visual representation of the given text. Usually only one task is handled at a time, and the methods are tailored for extracting data from one domain and translating it to the other domain. 
+Both Text-to-Image translation and Image-to-Text translation have been an active area of research in the recent past [5,6,7]. Both tasks are difficult and interesting problems to solve: The Image-to-Text task demands that the generated caption will faithfully describe the image, while the Text-to-Image task demands that the generated image should be a faithful visual representation of the given text. Usually only one task is handled at a time, and the methods are tailored for extracting data from one domain and translating it to the other domain. 
 
-Recently, some [2,3,4] took inspiration from CycleGAN's use of duality for unpaired data[1], by leveraging the cycle consistency duality for paired data of different domains, such as text and images. Inspired by those papers and recent advancements in deep learning and NLP, in this assignment we propose a novel architecture, CycleTransformer, to handle both Text-to-Image translation and Image-to-Text translation on paired data, using a unified architecture of transformers and CNNs and enforcing cycle consistency.
+Recently, some [2,3,4] took inspiration from CycleGAN's use of duality for unpaired data [1], by leveraging the cycle consistency duality for paired data of different domains, such as text and images. Inspired by those papers and recent advancements in deep learning and NLP, in this assignment we propose a novel architecture, CycleTransformer, to handle both Text-to-Image translation and Image-to-Text translation on paired data, using a unified architecture of transformers and CNNs and enforcing cycle consistency.
 
 ## Table of Contents
 * [Requirements](#requirements)
@@ -22,17 +22,18 @@ Recently, some [2,3,4] took inspiration from CycleGAN's use of duality for unpai
 
 ## Requirements
 The code was tested on python v3.8.12 with the following libraries:
-- datasets 1.17.0
-- matplotlib 3.4.3
-- numpy 1.21.3
-- pillow 8.4.0
-- pytorch 1.8.1
-- scikit-image 0.18.3
-- scipy 1.7.1
-- torch 1.10.0+cu111
-- torchvision 0.11.1+cu111
-- tqdm 4.63.0
-- transformers 4.15.0
+| Library | Version |
+| ------------- | ------------- |
+| `torch` | `1.10.0+cu111` |
+| `torchvision` | `0.11.1+cu111` |
+| `datasets` | `1.17.0` |
+| `transformers` | `0.21.3` |
+| `numpy` | `1.21.3` |
+| `scipy` | `1.7.1` |
+| `pillow` | `8.4.0` |
+| `scikit-image` | `0.18.3` |
+| `matplotlib` | `3.4.3` |
+| `tqdm` | `4.63.0` |
 
 ## Usage Example
 ### Training the model 
@@ -53,6 +54,7 @@ python main.py --out_dir <path_to_trained_model_dir> [--text <optional_text_prom
 
 Generates the images of the test split and generate captions for them, while comparing to the ground truths.  
 If the optional `--text` is given, will create a single image from that text and generate a corresponding caption to it.
+Use `--help` for more information on the parameters.
 
 ## Team
 Hila Manor and Matan Kleiner
