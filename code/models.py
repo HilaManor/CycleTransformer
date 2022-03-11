@@ -124,8 +124,17 @@ class Text2Image(nn.Module):
     decode_text - decode embedding into words
 
     main variables:
+    bert - transformer encoder model for embedding the input sentence
+    linear - linear layer, reduces the bert output
+    generator - image generator, generate an image from text embedding
     """
     def __init__(self, txt2im_model_args, txt_max_len, device='cpu'):
+        """Create a Text2Image model
+
+        :param txt2im_model_args: a dictionary containing configuration parameters for the txt2im model.
+        :param txt_max_len: the max length of an input sentence
+        :param device: the current device
+        """
         super().__init__()
         self.device = device
         self.bert = transformers.DistilBertModel.from_pretrained(txt2im_model_args["encoder_args"]["name"])
@@ -140,43 +149,58 @@ class Text2Image(nn.Module):
         self.generator = Generator(txt2im_model_args["generator_args"],
                                    self.noise_dim + self.linear_out * self.txt_max_len)
         
+        # we don't change bert parameters
         for param in self.bert.parameters():
             param.requires_grad = False
 
     def forward(self, x, fixed_noise=None):
-        #print(f'tokenizer:{x}')
-        #print(x.sum())
+        """The txt2im model forward pass, embed an input sentence using bert and a linear layer and send it to an
+        image generator
+
+        :param x: input sentence
+        :param fixed_noise: if none create normal distribution noise
+        :return: a generated image
+        """
         x = self.bert(x)
         x = x.last_hidden_state
-        #print(f'berts: {x}')
-        #print(x.sum())
         x = self.linear(x)
-        #print(f'lin: {x}')
-        #print(f'linsum: {x.sum()}')
 
         if fixed_noise is None:
             # Here we're only creating the noise that would be later concatenated to the embedding
             noise = torch.randn((x.shape[0], self.noise_dim, 1, 1))
         else:
             noise = fixed_noise
-            
-        #print(f'linshape: {x.shape} \tnoiseshape:{noise.shape}')
-        #print(f'~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~*=-#~')
         return self.generator(noise.to(self.device), x)        
 
     def decode_text(self, ids):
+        """Decode embedding into words
+
+        :param ids: a sentence ids
+        :return: the decoded sentence
+        """
         return self.tokenizer.batch_decode(ids, skip_special_tokens=True)  # [0]
 
 class Image2Text(nn.Module):
-    # Image -> DeiT -> GPT2 -> Text
+    """Image2Text model code
+    Image -> DeiT -> GPT2 -> Text
+
+    functions:
+    forward - the Image2Text forward pass
+    generate - generate a new sentence from image
+    decode_text - decode embedding into words
+
+    main variables:
+    vis_enc_dec - a vision encoder (vision transformer) decoder (transformer decoder) model which translate an image
+                  into a text
+    feature_extractor - the vision transformer feature extractor
+    """
     def __init__(self, im2txt_model_args, txt_max_len, device='cpu'):
         super().__init__()
         self.device = device
         self.vis_enc_dec = VisionEncoderDecoderModel.from_encoder_decoder_pretrained(im2txt_model_args["encoder_name"],
                                                                                      im2txt_model_args["decoder_name"])
-        # model = DeiTModel.from_pretrained("facebook/deit-base-distilled-patch16-224",
-        #                                          add_pooling_layer=False)
-        self.feature_extractor = DeiTFeatureExtractor.from_pretrained(im2txt_model_args["encoder_name"], do_resize=False, do_center_crop=False)  #, do_normalize=False)
+        self.feature_extractor = DeiTFeatureExtractor.from_pretrained(im2txt_model_args["encoder_name"],
+                                                                      do_resize=False, do_center_crop=False)
         self.feature_extractor.image_mean = torch.tensor(self.feature_extractor.image_mean).to(device)
         self.feature_extractor.image_std = torch.tensor(self.feature_extractor.image_std).to(device)
         self.tokenizer = AutoTokenizer.from_pretrained(im2txt_model_args["decoder_name"], use_fast=True)
@@ -189,38 +213,32 @@ class Image2Text(nn.Module):
         self.vis_enc_dec.config.vocab_size = self.vis_enc_dec.config.decoder.vocab_size
         self.txt_max_len = txt_max_len
 
-        # # Accessing the model configuration
-        # config_encoder = model.config.encoder
-        # config_decoder = self.vis_enc_dec.config.decoder
-        # # set decoder config to causal lm
-        # config_decoder.is_decoder = True
-        # config_decoder.add_cross_attention = True
-
     def forward(self, x, gt_labels):
-        #print(f'type of x: {type(x)}')
+        """The im2txt model forward pass, extract features from an image and than feed them to the vision encoder
+        decoder model
+
+        :param x: an input image
+        :param gt_labels: the ground truth sentence embedding
+        :return: a generated text for training
+        """
         x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze().to(self.device)
         x = self.vis_enc_dec(pixel_values=x, labels=gt_labels)
-        #x = self.vis_enc_dec.generate(x, max_length=self.txt_max_len)
         return x
 
     def generate(self, x):
+        """Generate a sentence for inference
+
+        :param x: an input image
+        :return: a new generated text
+        """
         x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze().to(self.device)
         x = self.vis_enc_dec.generate(pixel_values=x, max_length=self.txt_max_len, return_dict_in_generate=True).sequences
         return x
 
     def decode_text(self, ids):
+        """Decode embedding into words
+
+        :param ids: a sentence ids
+        :return: the decoded sentence
+        """
         return self.tokenizer.batch_decode(ids, skip_special_tokens=True)  # [0]
-        # training: loss = MLM(x, labels)
-
-        # outputs = model(**inputs)
-        #last_hidden_states = outputs.last_hidden_state
-
-        # pixel_values = processor(image, return_tensors="pt").pixel_values
-        # text = "hello world"
-        # labels = processor.tokenizer(text, return_tensors="pt").input_ids
-        # outputs = model(pixel_values=pixel_values, labels=labels)
-        # loss = outputs.loss
-        #
-        # # inference (generation)
-        # generated_ids = model.generate(pixel_values)
-        # generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
