@@ -31,12 +31,11 @@ VGG19_LAYERS_TRANSLATION = {'conv_1': 'conv1_1',
                             'conv_15': 'conv5_3',
                             'conv_16': 'conv5_4'}
 
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 class Normalization(nn.Module):
-    """Create a module to normalize an input image so we can easily put it in a nn.Sequential"""
+    """Create a module to normalize an input image for easily insertion to nn.Sequential"""
     def __init__(self, mean, std):
         """Create Normalization object with given mean and std values
 
@@ -71,7 +70,7 @@ class GramLoss(nn.Module):
     norm - normalization object to normalize the input images
     chosen_layers - VGG layers to use
     weights - chosen layers weights
-    vgg - VGG19 pre trained model from torchvision
+    vgg - VGG19 pre-trained model from torchvision
     """
     def __init__(self, chosen_layers=None, weights=None, device='cpu'):
         """Creates a gram loss object
@@ -92,19 +91,13 @@ class GramLoss(nn.Module):
         if self.weights is None:
             self.weights = [1, 0.75, 0.2, 0.2, 0.2]
         self.weights = torch.tensor(self.weights[:len(self.chosen_layers)]).to(self.device)
-        self.weights = self.weights / self.weights.sum() 
-
-        # an iterable access to or list of content/syle losses
-        # FIXME layers_losses is never used
-        layers_losses = []
+        self.weights = self.weights / self.weights.sum()
 
         # assuming that vgg is a nn.Sequential, we make a new nn.Sequential to put in modules
         # that are supposed to be activated sequentially
         self.vgg = nn.Sequential()
 
         i = 0  # increment every time there is a conv layer
-        # FIXME loss_f is never used
-        loss_f = None
         for layer in vgg.children():
             if isinstance(layer, nn.Conv2d):
                 i += 1
@@ -122,7 +115,6 @@ class GramLoss(nn.Module):
                 raise RuntimeError('Unrecognized layer: {}'.format(layer.__class__.__name__))
 
             self.vgg.add_module(name, layer)
-
 
     def forward(self, input, target):
         """GramLoss forward pass
@@ -152,7 +144,7 @@ class GramLoss(nn.Module):
 
     @staticmethod
     def _gram_matrix(x):
-        """Calculate the gram matrix of the given input
+        """Calculates the gram matrix of the given input
 
         :param x: 4D input data
         :return: the input's gram matrix

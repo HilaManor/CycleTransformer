@@ -1,6 +1,6 @@
 """Code for all the used models
 
-class Generator - image generator code
+class Generator - Image generator code
 class Text2Image - Text2Image model code
 class Image2Text - Image2Text model code
 """
@@ -105,7 +105,7 @@ class Generator(nn.Module):
         )
 
     def forward(self, noise, bert_embed):
-        """The image generator forward pass, concatenate the sentence embedding and noise and feed it to the generator
+        """The image generator forward pass, concatenates the sentence embedding and noise and feeds it to the generator
 
         :param noise: normal distribution noise
         :param bert_embed: the input sentence embedding
@@ -126,7 +126,7 @@ class Text2Image(nn.Module):
 
     main variables:
     bert - transformer encoder model for embedding the input sentence
-    linear - linear layer, reduces the bert output
+    linear - linear layer, reduces the BERT output dimension
     generator - image generator, generate an image from text embedding
     """
     def __init__(self, txt2im_model_args, txt_max_len, device='cpu'):
@@ -140,7 +140,7 @@ class Text2Image(nn.Module):
         self.device = device
         self.bert = transformers.DistilBertModel.from_pretrained(txt2im_model_args["encoder_args"]["name"])
         self.tokenizer = transformers.DistilBertTokenizer.from_pretrained(txt2im_model_args["encoder_args"]["name"])
-        self.bert_embed_dim = self.bert.config.hidden_size  # bert's output size
+        self.bert_embed_dim = self.bert.config.hidden_size  # BERT's output size
         # We need to add noise so the generator will be able to create multiple images for the same text
         self.linear_out = txt2im_model_args["linear_out_dim"]
         self.noise_dim = int(np.round(self.linear_out * txt2im_model_args["noise_dim_percent"]))
@@ -150,16 +150,16 @@ class Text2Image(nn.Module):
         self.generator = Generator(txt2im_model_args["generator_args"],
                                    self.noise_dim + self.linear_out * self.txt_max_len)
         
-        # we don't change bert parameters
+        # we freeze BERTS's weights
         for param in self.bert.parameters():
             param.requires_grad = False
 
     def forward(self, x, fixed_noise=None):
-        """The txt2im model forward pass, embed an input sentence using bert and a linear layer and send it to an
+        """The txt2im model's forward pass: embed an input sentence using BERT and a linear layer and send it to the
         image generator
 
         :param x: input sentence
-        :param fixed_noise: if none create normal distribution noise
+        :param fixed_noise: if none, samples a noise vector from the normal distribution
         :return: a generated image
         """
         x = self.bert(x)
@@ -174,12 +174,13 @@ class Text2Image(nn.Module):
         return self.generator(noise.to(self.device), x)        
 
     def decode_text(self, ids):
-        """Decode embedding into words
+        """Decode BERT's embedding back into words
 
         :param ids: a sentence ids
         :return: the decoded sentence
         """
         return self.tokenizer.batch_decode(ids, skip_special_tokens=True)  # [0]
+
 
 class Image2Text(nn.Module):
     """Image2Text model code
@@ -196,6 +197,12 @@ class Image2Text(nn.Module):
     feature_extractor - the vision transformer feature extractor
     """
     def __init__(self, im2txt_model_args, txt_max_len, device='cpu'):
+        """Create an Image2Text model
+
+        :param im2txt_model_args: a dictionary containing configuration parameters for the txt2im model.
+        :param txt_max_len: the max length of an input sentence
+        :param device: the current device
+        """
         super().__init__()
         self.device = device
         self.vis_enc_dec = VisionEncoderDecoderModel.from_encoder_decoder_pretrained(im2txt_model_args["encoder_name"],
@@ -215,7 +222,7 @@ class Image2Text(nn.Module):
         self.txt_max_len = txt_max_len
 
     def forward(self, x, gt_labels):
-        """The im2txt model forward pass, extract features from an image and than feed them to the vision encoder
+        """The im2txt model forward pass: extract features from an image and then feed them to the vision encoder
         decoder model
 
         :param x: an input image
@@ -227,27 +234,28 @@ class Image2Text(nn.Module):
         return x
 
     def generate(self, x):
-        """Generate a sentence for inference
+        """Generate a sentence for inference only
 
         :param x: an input image
         :return: a new generated text
         """
         try:
             x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze().to(self.device)
-        except:
-            raise("This error occurs because of a bug in huggingface's code. This bug is fixed by"
-                  "adding the following lines of code in the following location:\n"
-                  "location: ~/anaconda3/envs/NLP/lib/python3.8/site-packages/transformers/"
-                  "feature_extraction_utils.py\n"
-                  "line: 144\n"
-                  "add:\n"
-                  "elif isinstance(value, (list, torch.Tensor)):\n"
-                  "\treturn torch.stack(value)")
-        x = self.vis_enc_dec.generate(pixel_values=x, max_length=self.txt_max_len, return_dict_in_generate=True).sequences
+        except ValueError as e:
+            raise ValueError(
+                "This error occurs because of a bug in huggingface's code. This bug is fixed by"
+                "adding the following lines of code in the following location:\n"
+                "location: <python_base_folder>/site-packages/transformers/feature_extraction_utils.py\n"
+                "line: 144 (In 'def as_tensor(value):'\n"
+                "add:\n"
+                "elif isinstance(value, (list, torch.Tensor)):\n"
+                "\treturn torch.stack(value)")
+        x = self.vis_enc_dec.generate(pixel_values=x, max_length=self.txt_max_len,
+                                      return_dict_in_generate=True).sequences
         return x
 
     def decode_text(self, ids):
-        """Decode embedding into words
+        """Decode GPT2's embedding back into words
 
         :param ids: a sentence ids
         :return: the decoded sentence
