@@ -1,3 +1,11 @@
+"""Training and ???? functions for the model
+
+function train - train the entire model
+function calc_metrics - evaluate the model during training loop
+"""
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 import torch
 import torch.nn as nn
 from models import Text2Image, Image2Text
@@ -13,26 +21,37 @@ import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 torch.autograd.set_detect_anomaly(True)
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def train(args, dataset, device):
+    """Train the entire CycleTransformer model
+
+    :param args: a dictionary containing configuration parameters for the entire model.
+    :param dataset: a dataset to use for training
+    :param device: a device to use
+    """
+    # print args to log file
     with open(os.path.join(args["output_dir"], 'log.txt'), 'w') as fp:
         pprint.pprint(args, fp)
 
+    # load models
     txt2im_model = Text2Image(args["txt2im_model_args"], args["training_args"]["txt_max_len"], device).to(device)
     im2txt_model = Image2Text(args["im2txt_model_args"], args["training_args"]["txt_max_len"], device).to(device)
 
+    # get train, valid and test data loaders
     train_loader, valid_loader, test_loader = data_utils.get_loaders(args, dataset)
 
+    # define optimizer for txt2im and for im2txt
     txt2im_optimizer = torch.optim.Adam(txt2im_model.parameters(), lr=float(args["txt2im_model_args"]["learning_rate"]))
     im2txt_optimizer = torch.optim.Adam(im2txt_model.parameters(), lr=float(args["im2txt_model_args"]["learning_rate"]))
 
+    # define criterion for txt2im
     txt2im_recon_criterion = nn.MSELoss()
     txt2im_criterion = GramLoss(device=device)
-    #im2txt_criterion = nn.MSELoss()
-    #im2txt_criterion = nn.CrossEntropyLoss()
 
-    print(" ------------------------ STARTING TRAINING SUCCESS ERROR WARNING NONE None ------------------------ ")
-    deTensor = transforms.ToPILImage()
+    print(" ------------------------ STARTING TRAINING ------------------------ ")
+    #deTensor = transforms.ToPILImage()
     losses = {'im2txt_running_loss': [],
               'txt2im_running_loss': [],
               'txt2im_recon_running_loss': [],
@@ -47,16 +66,16 @@ def train(args, dataset, device):
         txt2im_style_running_loss = 0.0
         epoch_time = time.time()
         
+        # first do g_step iteration of **just** txt2im model to give the image generator a head start
+        # because the image generator is the only part we train from scratch
         for k in range(1, args["txt2im_model_args"]["g_step"]):
             for im, txt_tokens, _, _, _ in tqdm(train_loader):
-                # text to image
                 txt_tokens = txt_tokens.to(device)
                 im_gt = im.to(device)
                 im = txt2im_model(txt_tokens)
     
                 txt2im_style_loss = txt2im_criterion(im, im_gt)
                 txt2im_recon_loss = txt2im_recon_criterion(im, im_gt)
-    
                 txt2im_loss = txt2im_recon_loss + (args["txt2im_model_args"]["alpha"] * txt2im_style_loss)
     
                 txt2im_optimizer.zero_grad()  # zero the parameter gradients
@@ -67,13 +86,15 @@ def train(args, dataset, device):
                 del im_gt, im, txt2im_loss, txt_tokens, txt2im_style_loss, txt2im_recon_loss
                 torch.cuda.empty_cache()
                 
+            # save the txt2im model
             torch.save({'txt2im': txt2im_model.state_dict(),
                         'optimizer_txt2im': txt2im_optimizer.state_dict(),
                         'epochs': epoch,
                         'k': k, 
                         'args': args}, os.path.join(args["output_dir"], f'generator_k{k}.pth'))               
-            print(f"Finished {k}/{args['txt2im_model_args']['g_step'] - 1} iterartion in g-step") 
+            print(f"Finished {k}/{args['txt2im_model_args']['g_step'] - 1} iteration in g-step")
             
+        # after g_step iteration of just txt2im models, train the all model
         for i, (im, txt_tokens, masked_txt_tokens, _, _) in enumerate(tqdm(train_loader)):
             # text to image
             txt_tokens = txt_tokens.to(device)
@@ -82,7 +103,6 @@ def train(args, dataset, device):
 
             txt2im_style_loss = txt2im_criterion(im, im_gt)
             txt2im_recon_loss = txt2im_recon_criterion(im, im_gt)
-
             txt2im_loss = txt2im_recon_loss + (args["txt2im_model_args"]["alpha"] * txt2im_style_loss)
 
             txt2im_optimizer.zero_grad()  # zero the parameter gradients
@@ -100,20 +120,11 @@ def train(args, dataset, device):
 
             masked_txt_tokens = masked_txt_tokens.to(device)
             gen_tokens = im2txt_model(im, gt_labels=masked_txt_tokens)
-            #print(gen_tokens.loss)
-            #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            #print(len(list(gen_tokens.values())))
-            #print(len(list(gen_tokens.keys())))
-            #print(list(gen_tokens.values())[-1].shape)
-            #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            #print(txt_tokens.shape)
-            #im2txt_loss = im2txt_criterion(gen_tokens.float(), txt_tokens.float())
             im2txt_loss = gen_tokens.loss
             
-            # for x, p in im2txt_model.named_parameters():
-            #     print(f'{x}: {p.requires_grad}')
             im2txt_optimizer.zero_grad()  # zero the parameter gradients
             im2txt_loss.backward()  # backpropagation
+            # update optimizers params here for cycle training
             txt2im_optimizer.step()  # update parameters
             im2txt_optimizer.step()  # update parameters
 
@@ -122,10 +133,12 @@ def train(args, dataset, device):
             # Memory cleanup
             del im, im2txt_loss, masked_txt_tokens
             torch.cuda.empty_cache()
+
         im2txt_running_loss /= len(train_loader)
         txt2im_running_loss /= len(train_loader)
         txt2im_recon_running_loss /= len(train_loader)
         txt2im_style_running_loss /= len(train_loader)
+        # save losses
         losses['im2txt_running_loss'].append(im2txt_running_loss)
         losses['txt2im_running_loss'].append(txt2im_running_loss)
         losses['txt2im_recon_running_loss'].append(txt2im_recon_running_loss)
@@ -140,6 +153,7 @@ def train(args, dataset, device):
         with open(os.path.join(args["output_dir"], 'log.txt'), 'a') as fp:
             fp.write(logline + '\n')
 
+        # validate the model while training every val_epochs iterations
         if epoch % args["val_epochs"] == 0:
             txt2im_running_loss, im2txt_running_loss = calc_metrics(txt2im_model, im2txt_model, txt2im_criterion,
                                                                     txt2im_recon_criterion, valid_loader, 
@@ -151,7 +165,8 @@ def train(args, dataset, device):
             print(logline)
             with open(os.path.join(args["output_dir"], 'log.txt'), 'a') as fp:
                 fp.write(logline + '\n')      
-            
+
+            # save the entire model
             torch.save({'txt2im': txt2im_model.state_dict(),
                         'im2txt': im2txt_model.state_dict(),
                         'optimizer_txt2im': txt2im_optimizer.state_dict(),
@@ -161,6 +176,7 @@ def train(args, dataset, device):
                         'args': args}, os.path.join(args["output_dir"], f'models_e{epoch}.pth'))
             print(f"SAVED CHECKPOINT at {os.path.join(args['output_dir'], f'models_e{epoch}.pth')}")
 
+            # create graph for losses
             plt.figure()
             plt.subplot(2,2,1)
             plt.plot(list(range(1, epoch + 1)), losses['txt2im_running_loss'])
@@ -182,7 +198,8 @@ def train(args, dataset, device):
     #print(logline)
     #    with open(os.path.join(args["output_dir"], 'log.txt'), 'a') as fp:
     #        fp.write(logline + '\n')
-    
+
+    # create graph for losses and save the model after training has complete
     plt.figure()
     plt.subplot(2,2,1)
     plt.plot(list(range(1, args["epochs"] + 1)), losses['txt2im_running_loss'])
@@ -211,8 +228,23 @@ def train(args, dataset, device):
 
 def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_recon, 
                  dataloader, alpha, out_dir, epoch, device):
+    """Evaluate the entire model while training
+
+    :param txt2im_model: the txt2im model
+    :param im2txt_model: the im2txt model
+    :param txt2im_crit_style: txt2im style criterion
+    :param txt2im_crit_recon: txt2im reconstruction criterion
+    :param dataloader: data loader for loading the data
+    :param alpha: txt2im criterion hyperparameter
+    :param out_dir: dir for generated images
+    :param epoch: epoch's number
+    :param device: device to use
+    :return: txt2im_running_loss, im2txt_running_loss - the model's validation losses
+    """
+    # put the models on eval mode
     txt2im_model.eval()
     im2txt_model.eval()
+
     txt2im_running_loss = 0.0
     im2txt_running_loss = 0.0
     deTensor = transforms.ToPILImage()
@@ -239,7 +271,8 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
             masked_txt_tokens = masked_txt_tokens.to(device)
             im2txt_loss = im2txt_model(im, gt_labels=masked_txt_tokens).loss
             im2txt_running_loss += im2txt_loss.data.item()
-            
+
+            # create an image with the gt image and sentence and gen image and sentence
             if i == 0 or i == 1 or i == 2 or i == 3:
                 txt_tokens[txt_tokens == -100] = txt2im_model.tokenizer.pad_token_id 
                 gt_sentence = txt2im_model.decode_text(txt_tokens)

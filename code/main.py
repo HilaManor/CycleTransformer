@@ -42,6 +42,7 @@ if __name__ == '__main__':
 
     utils.create_output_dir(args)
 
+    # define device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using {device}")
 

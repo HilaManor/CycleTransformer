@@ -239,9 +239,18 @@ class Image2Text(nn.Module):
         :param x: an input image
         :return: a new generated text
         """
-        x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze().to(self.device)
-        x = self.vis_enc_dec.generate(pixel_values=x, max_length=self.txt_max_len,
-                                      return_dict_in_generate=True).sequences
+        try:
+            x = self.feature_extractor(x, return_tensors="pt").pixel_values.squeeze().to(self.device)
+        except:
+            raise("This error occurs because of a bug in huggingface's code. This bug is fixed by"
+                  "adding the following lines of code in the following location:\n"
+                  "location: ~/anaconda3/envs/NLP/lib/python3.8/site-packages/transformers/"
+                  "feature_extraction_utils.py\n"
+                  "line: 144\n"
+                  "add:\n"
+                  "elif isinstance(value, (list, torch.Tensor)):\n"
+                  "\treturn torch.stack(value)")
+        x = self.vis_enc_dec.generate(pixel_values=x, max_length=self.txt_max_len, return_dict_in_generate=True).sequences
         return x
 
     def decode_text(self, ids):
