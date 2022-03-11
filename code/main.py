@@ -1,3 +1,8 @@
+"""CycleTransformer: Text-to-Image-to-Text Using Cycle Consistency
+Matan Kleiner & Hila Manor
+"""
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~
 import argparse
 import yaml
 import training
@@ -7,13 +12,10 @@ import torch
 from FlowersDataset import ImageCaption102FlowersDataset
 from torchvision import transforms
 
-class dotdict(dict):
-    """dot.notation access to dictionary attributes"""
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if __name__ == '__main__':
+    # ----- Creating Argument Parser -----
     parser = argparse.ArgumentParser('CycleTransformer')
     parser.add_argument('--epochs', type=int, default=5,
                         help='The amount of epochs to train the model')
@@ -26,10 +28,11 @@ if __name__ == '__main__':
     with open(parsed_args.config) as f:
         args = yaml.load(f, Loader=yaml.FullLoader)
     args.update(vars(parsed_args))
-    #args = dotdict(args)
-    
+
+    # set seed for reproducibility
     utils.set_seed(42)
 
+    # create dataset
     if args['db_type'] == 'flowers':
         transformations = transforms.Compose([transforms.Resize((224,224)),#transforms.Resize((224,224)),
                                               transforms.ToTensor()])

@@ -1,12 +1,37 @@
+"""Code for all the used models
+
+class Generator - image generator code
+class Text2Image - Text2Image model code
+class Image2Text - Image2Text model code
+"""
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~
 import numpy as np
 import torch
 import torch.nn as nn
 import transformers
 from transformers import VisionEncoderDecoderModel, DeiTFeatureExtractor, AutoTokenizer
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class Generator(nn.Module):
+    """Code for image generator model
+
+    function:
+    forward - the image generator forward pass
+
+    variables:
+    out_channels - output channels' number
+    input_dim - input's dimensions
+    nf -
+    body - image generator architecture
+    """
     def __init__(self, generator_args, input_dim):
+        """Create an image generator
+
+        :param generator_args: a dictionary containing configuration parameters for the image generator.
+        :param input_dim: input's dimension
+        """
         super().__init__()
         self.out_channels = generator_args["out_channels"]  # color channels
         self.input_dim = input_dim
@@ -21,9 +46,7 @@ class Generator(nn.Module):
                                padding=0,
                                bias=False),
             nn.GroupNorm(8, self.nf * 32),
-            #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
-            # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf * 32) x 4 x 4
             nn.ConvTranspose2d(in_channels=self.nf * 32,
                                out_channels=self.nf * 16,
@@ -32,9 +55,7 @@ class Generator(nn.Module):
                                padding=1,
                                bias=False),
             nn.GroupNorm(8, self.nf * 16),
-            #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
-            # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf * 16) x 7 x 7
             nn.ConvTranspose2d(in_channels=self.nf * 16,
                                out_channels=self.nf * 8,
@@ -43,9 +64,7 @@ class Generator(nn.Module):
                                padding=1,
                                bias=False),
             nn.GroupNorm(8, self.nf * 8),
-            #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
-            # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf *8) x 14 x 14
             nn.ConvTranspose2d(in_channels=self.nf * 8,
                                out_channels=self.nf * 4,
@@ -54,9 +73,7 @@ class Generator(nn.Module):
                                padding=1,
                                bias=False),
             nn.GroupNorm(8, self.nf * 4),
-            #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
-            # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf * 4) x 28 x 28
             nn.ConvTranspose2d(in_channels=self.nf * 4,
                                out_channels=self.nf * 2,
@@ -65,9 +82,7 @@ class Generator(nn.Module):
                                padding=1,
                                bias=False),
             nn.GroupNorm(8, self.nf * 2),
-            #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
-            # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf * 2) x 56 x 56
             nn.ConvTranspose2d(in_channels=self.nf * 2,
                                out_channels=self.nf,
@@ -76,9 +91,7 @@ class Generator(nn.Module):
                                padding=1,
                                bias=False),
             nn.GroupNorm(8, self.nf),
-            #nn.LeakyReLU(0.1, inplace=True),
             nn.ReLU(inplace=True),
-            # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3,)
             # state size: b x (nf) x 112 x 112
             nn.ConvTranspose2d(in_channels=self.nf,
                                out_channels=self.out_channels,
@@ -91,13 +104,27 @@ class Generator(nn.Module):
         )
 
     def forward(self, noise, bert_embed):
+        """The image generator forward pass, concatenate the sentence embedding and noise and feed it to the generator
+
+        :param noise: normal distribution noise
+        :param bert_embed: the input sentence embedding
+        :return: a generated image
+        """
         bert_embed = bert_embed.view(bert_embed.shape[0], -1, 1, 1)
         gen_input = torch.cat([noise, bert_embed], 1)
         return self.body(gen_input)
         
 
 class Text2Image(nn.Module):
-    # Text -> BERT -> Generator -> Image
+    """Text2Image model code
+    Text -> BERT -> Generator -> Image
+
+    functions:
+    forward - the Text2Image forward pass
+    decode_text - decode embedding into words
+
+    main variables:
+    """
     def __init__(self, txt2im_model_args, txt_max_len, device='cpu'):
         super().__init__()
         self.device = device

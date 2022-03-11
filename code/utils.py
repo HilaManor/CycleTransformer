@@ -1,15 +1,23 @@
+"""Utility functions
+
+function _gen_unique_out_dir_path - generate a unique name for each new out dir
+function create_output_dir - create a new output dir
+function set_seed - set a seed for reproducibility
+"""
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~
 import os
 import re
 import torch
 import random
 import numpy as np
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 def _gen_unique_out_dir_path(args):
-    """
-    Generates unique name for a new file, to avoid override.
+    """Generates unique name for a new file, to avoid override.
 
     :param args: The current configuration of the test.
-
     :return: string of the possible path, with important data from args.
     """
 
@@ -34,12 +42,20 @@ def _gen_unique_out_dir_path(args):
 
 
 def create_output_dir(args):
+    """Create a new output dir with unique name
+
+    :param args: a dictionary containing configuration parameters for the entire model.
+    """
     outpath = _gen_unique_out_dir_path(args)
     args['output_dir'] = outpath
     os.makedirs(outpath)
 
 
 def set_seed(seed=42):
+    """Set a seed for reproducibility using python, numpy and pytorch methods
+
+    :param seed: the seed number
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)

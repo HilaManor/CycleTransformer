@@ -1,12 +1,38 @@
+"""Create a custom 102 flowers dataset
+
+class ImageCaption102FlowersDataset - custom dataset
+"""
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~
 import torch
 from torch.utils.data import Dataset
 from transformers import DeiTFeatureExtractor, DistilBertTokenizer, AutoTokenizer
 import os
 from PIL import Image
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class ImageCaption102FlowersDataset(Dataset):
+    """Custom 102 flowers dataset
+
+    functions:
+    __len__ - return the dataset's length
+    __getitem__ - return an item from the dataset
+
+    variables:
+    flowers_path, imgs_path, txts_path - path to data
+    BERT_tokenizer, GPT2tokenizer - tokenizer for transformer model
+    feature_extractor - feature extractor for vision transformer model
+    txt_max_len - the max length of an input sentence
+    transform - transformation for an input image
+    """
+
     def __init__(self, args, transform=None):
+        """Create a dataset object
+
+        :param args: a dictionary containing configuration parameters for the entire model.
+        :param transform: transformation for an input image
+        """
         self.flowers_path = args["db_path"]
         self.BERT_tokenizer = DistilBertTokenizer.from_pretrained(args["txt2im_model_args"]["encoder_args"]["name"])
         self.GPT2tokenizer = AutoTokenizer.from_pretrained(args["im2txt_model_args"]["decoder_name"], use_fast=True)
@@ -18,12 +44,15 @@ class ImageCaption102FlowersDataset(Dataset):
         self.transform = transform
 
     def __len__(self):
+        """Return dataset's length """
         return len(os.listdir(self.imgs_path)) * 10  # Each txt file in this database contains 10 sentences
 
     def __getitem__(self, idx):
+        """Return dataset item as a tuple of (image, tokens for text2im, tokens for im2txt, image index, text index)"""
         if type(idx) == torch.Tensor:
             idx = idx.item()
 
+        # there are 10 sentences describing each image
         img_idx = idx // 10 + 1
         txt_idx = idx % 10
 
