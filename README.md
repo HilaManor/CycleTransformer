@@ -15,10 +15,12 @@ Recently, some [2,3,4] took inspiration from CycleGAN's use of duality for unpai
 
 ## Table of Contents
 * [Requirements](#requirements)
+* [Repository Structure](repository-structure) 
 * [Usage Example](#usage-example)
+* [Model](#model)
 * [Team](#team)
 * [Examples](#examples)
-* [Sources](#sources)
+* [Refrences](#refrences)
 
 ## Requirements
 The code was tested on python v3.8.12 with the following libraries:
@@ -34,6 +36,14 @@ The code was tested on python v3.8.12 with the following libraries:
 | `scikit-image` | `0.18.3` |
 | `matplotlib` | `3.4.3` |
 | `tqdm` | `4.63.0` |
+
+## Repository Structure 
+```
+├── code - the code for training the CycleTransformer model
+├── config - configurations for the CycleTransformer model
+├── images - images used in this repository 
+├── short_paper - short paper in ACL format describing the CycleTransformer model 
+```
 
 ## Usage Example
 ### Training the model 
@@ -56,13 +66,17 @@ Generates the images of the test split and generate captions for them, while com
 If the optional `--text` is given, will create a single image from that text and generate a corresponding caption to it.
 Use `--help` for more information on the parameters.
 
+## Model 
+CycleTransformer model is comprised of Text-to-Image and Image-to-Text parts.
+The Text-to-Image model is comprised of distill BERT for text embedding. We concatenate a random noise vector sampled from the standard normal distributed to this embedding vector. The size of the noise vector is $20\%$ of the size of the embedding vector. We feed the concatenated vector to an image generator model. The generator model is based on DCGAN's generator 
+
 ## Team
 Hila Manor and Matan Kleiner
 
 ## Examples
 
 
-## Sources
+## Refrences
 1. Jun-Yan Zhu, Taesung Park, Phillip Isola, and Alexei A Efros. 2017. [Unpaired image-to-image translation using cycle-consistent adversarial networks](https://arxiv.org/abs/1703.10593), In *Proceedings of the IEEE international conference on computer vision*, pages 2223–2232. 
 2. Mohammad R. Alam, Nicole A. Isoda, Mitch C. Manzanares, Anthony C. Delgado, and Antonius F. Panggabean. 2021. [TextCycleGAN: cyclical-generative adversarial networks for image captioning](https://spie.org/Publications/Proceedings/Paper/10.1117/12.2585549), In *Artificial Intelligence and Machine Learning for Multi-Domain Operations Applications* III, volume 11746, pages 213 – 220. International Society for Optics and Photonics, SPIE
 3. Satya Krishna Gorti and Jeremy Ma. 2018. [Text-to-image-to-text translation using cycle consistent adversarial networks](https://arxiv.org/abs/1808.04538), *arXiv preprint*, arXiv:1808.04538
