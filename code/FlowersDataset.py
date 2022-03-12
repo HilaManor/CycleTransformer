@@ -76,3 +76,7 @@ class ImageCaption102FlowersDataset(Dataset):
             im = self.transform(im)
 
         return im, txt2im_labels, im2txt_masked_labels, img_idx, txt_idx
+
+    def get_captions_of_image(self, img_idx):
+        with open(os.path.join(self.txts_path, f'image_{img_idx:05}.txt')) as f:
+            return f.read().split('\n')

@@ -55,7 +55,7 @@ def generate(args, dataset, transformations, device):
     os.makedirs(gens_dir, exist_ok=True)
 
     if args["text"] is None and args["img_path"] is None:
-        generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model)
+        generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model, dataset)
     else:
         if args["text"] is not None:
             generate_custom_images_examples(args["text"], args["amount"], device, gens_dir, txt2im_model)
@@ -110,7 +110,7 @@ def generate_custom_images_examples(text, amount, device, gens_dir, txt2im_model
             gen_im.save(os.path.join(gens_dir, f'im_{" ".join(text.split(" ")[:5])}_{i}.png'))
 
 
-def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model):
+def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model, dataset):
     """Generate new text and image from the test set
 
     :param device: device to use
@@ -171,6 +171,22 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
                                          f"im{im_idx[j]:05}_sen{txt_idx[j]}.png"))
                 plt.close('all')
 
+                gen_sentences.append((gen_sentence[j], im_idx[j]))
+
+        # calculate metrics
+        for gen_sentence, im_idx in gen_sentences:
+            ref_sentences = dataset.get_captions_of_image(im_idx)
+            meteor.add_batch(predictions=[gen_sentence], references=ref_sentences)
+            rouge.add_batch(predictions=[gen_sentence], references=ref_sentences)
+            bleu.add_batch(predictions=[gen_sentence.split(' ')], references=[[r.split(' ') for r in ref_sentences]])
+        m_score = meteor.compute()['meteor']
+        r_score = rouge.compute()['rougeL']
+        b_score = bleu.compute()['bleu']
+
+        logline = f"\nMETEOR score: {m_score:.4g} \t ROUGE score: {r_score:.4g} \t BLEU-4 score: {b_score}:.4g"
+        print(logline)
+        with open(os.path.join(gens_dir, 'scores.txt'), 'w') as f:
+            f.write(logline + '\n')
 
 if __name__ == '__main__':
     # ----- Creating Argument Parser -----
