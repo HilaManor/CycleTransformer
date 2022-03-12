@@ -55,6 +55,7 @@ def generate(args, dataset, transformations, device):
     os.makedirs(gens_dir, exist_ok=True)
 
     if args["text"] is None and args["img_path"] is None:
+        # write the test split images name to a filer, for calculating FID score
         print('Writing the test split images names')
         with open(os.path.join(gens_dir, 'test_split_images.txt'), 'w') as f:
             for _, _, _, im_idx, _ in tqdm(test_loader):
@@ -125,10 +126,12 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
     :param txt2im_model: trained txt2im model
     """
     deTensor = transforms.ToPILImage()
+    # metrics for evaluation the image's captions
     bleu = datasets.load_metric('bleu')
     rouge = datasets.load_metric('rouge')
     meteor = datasets.load_metric('meteor')
-  
+
+    # create dirs for results
     comparisons_dir = os.path.join(gens_dir, 'comparisons')
     generated_images_dir = os.path.join(gens_dir, 'all generated images')
     os.makedirs(comparisons_dir, exist_ok=True)
@@ -136,7 +139,7 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
 
     gen_sentences = []
 
-    print('generating test images')
+    print('Generating test images')
     with torch.no_grad():
         for i, (gt_im, txt_tokens, _, im_idx, txt_idx) in enumerate(tqdm(test_loader)):
             torch.cuda.empty_cache()
@@ -157,13 +160,12 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
             gt_im = gt_im.to(device)
             gt_im = [x for x in gt_im]
 
-            # feed the generated image to the im2txt model to generate new sentences
+            # feed the gt image to the im2txt model to generate new sentences
             gen_tokens = im2txt_model.generate(gt_im)
             gen_sentence = im2txt_model.decode_text(gen_tokens)
             gen_sentence = [s.strip() for s in gen_sentence]
 
             gt_im = [deTensor(x) for x in gt_im]
-            #bleu.add_batch(predictions=, references=)
 
             # create an image with the gt image and sentence and gen image and sentence
             for j in range(len(gen_im)):

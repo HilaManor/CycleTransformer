@@ -19,6 +19,7 @@ class ImageCaption102FlowersDataset(Dataset):
     functions:
     __len__ - return the dataset's length
     __getitem__ - return an item from the dataset
+    get_captions_of_image - get all the captions of a given image
 
     variables:
     flowers_path, imgs_path, txts_path - path to data
@@ -78,5 +79,10 @@ class ImageCaption102FlowersDataset(Dataset):
         return im, txt2im_labels, im2txt_masked_labels, img_idx, txt_idx
 
     def get_captions_of_image(self, img_idx):
+        """Get all the captions (10) of a given image
+
+        :param img_idx: idx of a given image
+        :return: a list of all the captions (10) of a given image
+        """
         with open(os.path.join(self.txts_path, f'image_{img_idx:05}.txt')) as f:
             return f.read().split('\n')
