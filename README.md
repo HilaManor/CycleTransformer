@@ -64,7 +64,7 @@ python main.py --out_dir <path_to_trained_model_dir> [--text <optional_text_prom
 
 Generates the images of the test split and generate captions for them, while comparing to the ground truths.  
 If the optional `--text` is given, will generate images from that text. The amount of generated images is given by `--amount`
-If the optional `--img_path` is given, will generate a text caption for the given image.
+If the optional `--img_path` is given, will generate a text caption for the given image.  
 Use `--help` for more information on the parameters.
 
 ### Fixing Hugginface Bug
@@ -81,12 +81,9 @@ elif isinstance(value, (list, torch.Tensor)):
 ```
 
 ## Model 
-CycleTransformer model is comprised of Text-to-Image and Image-to-Text parts.
-
-The Text-to-Image model is comprised of distill BERT for text embedding. We concatenate a random noise vector sampled from the standard normal distributed to this embedding and then feed it to an image generator model. The Text-to-Image model is trained using perceptaul and reconstruction losses. 
-
-The Image-to-text model is an encoder decoder structure composed of distill DeiT model for features extractor and a GPT2 for text generation. This model is trained using language modelling loss. 
-
+CycleTransformer model is comprised of Text-to-Image and Image-to-Text parts.  
+The Text-to-Image model is comprised of distill BERT for text embedding. We concatenate a random noise vector sampled from the standard normal distributed to this embedding and then feed it to an image generator model. The Text-to-Image model is trained using perceptaul and reconstruction losses.  
+The Image-to-text model is an encoder decoder structure composed of distill DeiT model for features extractor and a GPT2 for text generation. This model is trained using language modelling loss.  
 Read our short paper for more detailes about the model. 
 
 ![model](https://user-images.githubusercontent.com/63591190/157965275-6a900647-f0ad-4421-b799-df3a00d835ed.png)
