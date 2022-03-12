@@ -63,14 +63,14 @@ python main.py --out_dir <path_to_trained_model_dir> [--text <optional_text_prom
 ```
 
 Generates the images of the test split and generate captions for them, while comparing to the ground truths.  
-If the optional `--text` is given, will generate images from that text. The amount of generated images is given by `--amount`
+If the optional `--text` is given, will generate images from that text. The amount of generated images is given by `--amount`.  
 If the optional `--img_path` is given, will generate a text caption for the given image.  
 Use `--help` for more information on the parameters.
 
 ### Fixing Hugginface Bug
 
-The transformers code we've been working on had a bug which didn't allow the use of tensors in the ViT feature extraction method, which we had to fix in the library's code to allow complete gradient flow (for the consistency cycle).  
-This means that for our code to run, until the bugg will fixed in the offical repo, you must fix it yourself before running the code.
+The transformers code we've been working with had a bug which didn't allow the use of tensors in the ViT feature extraction method. We had to fix this bug in the library's code to allow complete gradient flow (for the consistency cycle).  
+This means that for our code to run, until the bug will fixed in the offical repo, you must fix it yourself before running the code.
 
 To fix the bug you should edit `feature_extraction_utils.py` located in `<python_base_folder>/site-packages/transformers/`:  
 line 144 (under the function `as_tensor(value)`, declared in line 142 of transformersv4.15.0):  
