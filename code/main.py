@@ -22,6 +22,8 @@ if __name__ == '__main__':
                         help='The amount of epochs for which to check the validation metrics')
     parser.add_argument('--config', default='../configs/config.yaml', type=str,
                         help='Path to YAML config file. Default: config.yaml')
+    parser.add_argument('--baseline', action='store_true',
+                        help='Train the baseline models instead of the cycle consistent model')
     parsed_args = parser.parse_args()
 
     # This type of loading gives precedence to the parser arguments

@@ -107,13 +107,20 @@ def train(args, dataset, device):
 
             txt2im_optimizer.zero_grad()  # zero the parameter gradients
             txt2im_loss.backward(retain_graph=True)  # backpropagation
+            if args["baseline"]:
+                txt2im_optimizer.step()  # update parameters
 
             txt2im_running_loss += txt2im_loss.data.item()
             txt2im_recon_running_loss += txt2im_recon_loss.data.item()
             txt2im_style_running_loss += txt2im_style_loss.data.item()
-            
-            # im = [deTensor(x) for x in im.detach().cpu()]
-            im = [x for x in im]
+
+            if args["baseline"]:
+                # In the baselines we don't have cycle consistency
+                im = [x for x in im_gt]
+            else:
+                # In the proposed model the cycle consistency is enforced via the gradient flow
+                im = [x for x in im]
+
             # Memory cleanup
             del im_gt, txt2im_loss, txt_tokens, txt2im_style_loss, txt2im_recon_loss
             torch.cuda.empty_cache()
@@ -125,7 +132,8 @@ def train(args, dataset, device):
             im2txt_optimizer.zero_grad()  # zero the parameter gradients
             im2txt_loss.backward()  # backpropagation
             # update optimizers params here for cycle training
-            txt2im_optimizer.step()  # update parameters
+            if not args["baseline"]:
+                txt2im_optimizer.step()  # update parameters
             im2txt_optimizer.step()  # update parameters
 
             im2txt_running_loss += im2txt_loss.data.item()
@@ -159,7 +167,7 @@ def train(args, dataset, device):
                                                                     txt2im_recon_criterion, valid_loader, 
                                                                     args["txt2im_model_args"]["alpha"], 
                                                                     os.path.join(args["output_dir"], 'valid_ims'), 
-                                                                    epoch, device)
+                                                                    epoch, baseline, device)
             logline = f"VALIDATION - Epoch: {epoch}/{args['epochs']} | Txt2Im Loss: {txt2im_running_loss:.4g} | " \
                       f"Im2Txt Loss: {im2txt_running_loss:.4g}"
             print(logline)
@@ -219,7 +227,7 @@ def train(args, dataset, device):
 
 
 def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_recon, 
-                 dataloader, alpha, out_dir, epoch, device):
+                 dataloader, alpha, out_dir, epoch, baseline, device):
     """Evaluate the entire model while training
 
     :param txt2im_model: the txt2im model
@@ -230,6 +238,7 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
     :param alpha: txt2im criterion hyperparameter
     :param out_dir: dir for outputting the generated images
     :param epoch: epoch number
+    :param baseline: bool flag - True if training the baseline models
     :param device: current device
     :return: txt2im_running_loss, im2txt_running_loss - the model's validation losses
     """
@@ -253,8 +262,14 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
             txt2im_recon_loss = txt2im_crit_recon(im, im_gt)
             txt2im_loss = txt2im_recon_loss + (alpha * txt2im_style_loss)
             txt2im_running_loss += txt2im_loss.data.item()
-            
-            im = [x for x in im]
+
+            if baseline:
+                # In the baselines we don't have cycle consistency
+                im = [x for x in im_gt]
+            else:
+                # In the proposed model the cycle consistency is enforced via the gradient flow
+                im = [x for x in im]
+
             im_gt = [deTensor(x) for x in im_gt.detach().cpu()]
             # Memory cleanup
             del txt2im_style_loss, txt2im_recon_loss, txt2im_loss

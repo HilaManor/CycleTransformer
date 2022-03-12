@@ -13,15 +13,17 @@ from torchvision import transforms
 import argparse
 from FlowersDataset import ImageCaption102FlowersDataset
 import utils
+from PIL import Image
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-def generate(args, dataset, device):
+def generate(args, dataset, transformations, device):
     """Generate new images and sentences from the trained model, on the test split
 
     :param args: a dictionary containing configuration parameters for the entire model.
     :param dataset: a dataset to use for generating
+    :param transformations: the transformation applied to input images
     :param device: a device to use
     """
     # load trained models
@@ -39,10 +41,58 @@ def generate(args, dataset, device):
     # generate new images and sentence from the test set
     _, _, test_loader = data_utils.get_loaders(args, dataset)
 
-    gens_dir = os.path.join(args["output_dir"], "generations")
+    if args["text"] is None and args["img_path"] is None:
+        gens_dir = os.path.join(args["output_dir"], "test_generations")
+    else:
+        gens_dir = os.path.join(args["output_dir"], "custom_generations")
     os.makedirs(gens_dir, exist_ok=True)
-    deTensor = transforms.ToPILImage()
 
+    if args["text"] is None and args["img_path"] is None:
+        generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model)
+    else:
+        if args["text"] is not None:
+            gen_im = generate_custom_images_examples(args["text"], args["amount"], device, gens_dir, txt2im_model)
+
+        if args["img_path"] is not None:
+            generate_custom_text_examples(args["img_path"], device, gens_dir, im2txt_model, transformations)
+
+
+def generate_custom_text_examples(img_path, device, gens_dir, im2txt_model, transform):
+    with torch.no_grad():
+        torch.cuda.empty_cache()
+
+        im = Image.open(img_path).convert("RGB")
+        im = transform(im).to(device)
+        im = [x for x in im]
+
+        # feed the generated image to the im2txt model to generate new sentences
+        gen_tokens = im2txt_model.generate(im)
+        gen_sentence = im2txt_model.decode_text(gen_tokens)
+        gen_sentence = [s.strip() for s in gen_sentence]
+
+        with open(os.path.join(gens_dir, f'{img_path}.txt'), 'w') as txtf:
+            txtf.write(gen_sentence + '\n')
+
+
+def generate_custom_images_examples(text, amount, device, gens_dir, txt2im_model):
+    deTensor = transforms.ToPILImage()
+    with torch.no_grad():
+        torch.cuda.empty_cache()
+        # tokenize the given sentence and feed it to txt2im model to generate new images
+        txt_tokens = txt2im_model.encode_text(text).to(device)
+
+        for i in range(amount):
+            gen_im = txt2im_model(txt_tokens)
+
+            # convert the gen and gt im from tensors to PIL images
+            gen_im = [deTensor(x) for x in gen_im.detach().cpu()]
+
+            plt.imsave(os.path.join(gens_dir, f'im_{" ".join(text.split(" ")[:5])}_{i}.png'), gen_im)
+    return gen_im
+
+
+def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model):
+    deTensor = transforms.ToPILImage()
     with torch.no_grad():
         for i, (gt_im, txt_tokens, _, im_idx, txt_idx) in enumerate(test_loader):
             torch.cuda.empty_cache()
@@ -51,7 +101,7 @@ def generate(args, dataset, device):
             gen_im = txt2im_model(txt_tokens)
 
             # decode the gt sentence
-            txt_tokens[txt_tokens == -100] = txt2im_model.tokenizer.pad_token_id 
+            txt_tokens[txt_tokens == -100] = txt2im_model.tokenizer.pad_token_id
             gt_sentence = txt2im_model.decode_text(txt_tokens)
 
             # Memory cleanup
@@ -66,7 +116,7 @@ def generate(args, dataset, device):
             gen_tokens = im2txt_model.generate(gen_im)
             gen_sentence = im2txt_model.decode_text(gen_tokens)
             gen_sentence = [s.strip() for s in gen_sentence]
-            
+
             # create an image with the gt image and sentence and gen image and sentence
             for j in range(len(gen_im)):
                 print(repr(gen_sentence[j]))
@@ -89,6 +139,8 @@ if __name__ == '__main__':
     # ----- Creating Argument Parser -----
     parser = argparse.ArgumentParser('CycleTransformer Generator Only')
     parser.add_argument('--out_dir', required=True, type=str, help='A directory of a trained model to generate for')
+    parser.add_argument('--text', type=str, default=None, help='Text prompt for which to generate an image')
+    parser.add_argument('--img_path', type=str, default=None, help='Path to the image for which to generate a caption')
     parsed_args = parser.parse_args()
 
     # define device
@@ -109,4 +161,4 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError("No such DB")
 
-    generate(args, dataset, device)
+    generate(args, dataset, transformations, device)
