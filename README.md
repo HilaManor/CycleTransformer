@@ -45,6 +45,18 @@ conda create --name CycleTransformer python=3.8.12 pytorch=1.10.0 torchvision=0.
 conda activate CycleTransformer
 pip install transformers==4.15.0 datasets==1.17.0
 ```
+### IMPORTANT - Fixing Hugginface Bug
+
+The transformers code we've been working with had a bug which didn't allow the use of tensors in the ViT feature extraction method. We had to fix this bug in the library's code to allow complete gradient flow (for the consistency cycle).  
+This means that for our code to run, until the bug will fixed in the offical repo, you must fix it yourself before running the code.
+
+To fix the bug you should edit `feature_extraction_utils.py` located in `<python_base_folder>/site-packages/transformers/`:  
+line 144 (under the function `as_tensor(value)`, declared in line 142 of transformersv4.15.0):  
+add:
+```python 
+elif isinstance(value, (list, torch.Tensor)):
+    return torch.stack(value)
+```
 
 
 ## Repository Structure 
@@ -76,18 +88,6 @@ If the optional `--text` is given, will generate images from that text. The amou
 If the optional `--img_path` is given, will generate a text caption for the given image.  
 Use `--help` for more information on the parameters.
 
-### Fixing Hugginface Bug
-
-The transformers code we've been working with had a bug which didn't allow the use of tensors in the ViT feature extraction method. We had to fix this bug in the library's code to allow complete gradient flow (for the consistency cycle).  
-This means that for our code to run, until the bug will fixed in the offical repo, you must fix it yourself before running the code.
-
-To fix the bug you should edit `feature_extraction_utils.py` located in `<python_base_folder>/site-packages/transformers/`:  
-line 144 (under the function `as_tensor(value)`, declared in line 142 of transformersv4.15.0):  
-add:
-```python 
-elif isinstance(value, (list, torch.Tensor)):
-    return torch.stack(value)
-```
 
 ## Model 
 CycleTransformer model is comprised of Text-to-Image and Image-to-Text parts.  
