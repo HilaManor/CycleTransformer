@@ -111,9 +111,10 @@ class Generator(nn.Module):
         :param bert_embed: the input sentence embedding
         :return: a generated image
         """
-        bert_embed = bert_embed.view(bert_embed.shape[0], -1, 1, 1)
-        gen_input = torch.cat([noise, bert_embed], 1)
-        return self.body(gen_input)
+        x = bert_embed.view(bert_embed.shape[0], -1, 1, 1)
+        x = torch.cat([noise, x], 1)
+        x = self.body(x)
+        return (x + 1) / 2  # normalize output 
         
 
 class Text2Image(nn.Module):
