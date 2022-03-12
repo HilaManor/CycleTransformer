@@ -141,6 +141,8 @@ if __name__ == '__main__':
     parser.add_argument('--out_dir', required=True, type=str, help='A directory of a trained model to generate for')
     parser.add_argument('--text', type=str, default=None, help='Text prompt for which to generate an image')
     parser.add_argument('--img_path', type=str, default=None, help='Path to the image for which to generate a caption')
+    parser.add_argument('--amount', type=int, default=1, help="The amount of images to generate from the cutsom text, "
+                                                              "if given (via '--text')")
     parsed_args = parser.parse_args()
 
     # define device
