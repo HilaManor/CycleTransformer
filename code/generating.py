@@ -17,6 +17,7 @@ import argparse
 from FlowersDataset import ImageCaption102FlowersDataset
 import utils
 from PIL import Image
+from sentence_transformers import SentenceTransformer
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -41,6 +42,9 @@ def generate(args, dataset, transformations, device):
     txt2im_model.eval()
     im2txt_model.eval()
 
+    sentence_similarity_model = SentenceTransformer(args["sentence_similarity_name"])
+
+
     # generate new images and sentence from the test set
     _, _, test_loader = data_utils.get_loaders(args, dataset)
 
@@ -51,7 +55,7 @@ def generate(args, dataset, transformations, device):
     os.makedirs(gens_dir, exist_ok=True)
 
     if args["text"] is None and args["img_path"] is None:
-        generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model)
+        generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model, sentence_similarity_model)
     else:
         if args["text"] is not None:
             generate_custom_images_examples(args["text"], args["amount"], device, gens_dir, txt2im_model)
@@ -109,16 +113,18 @@ def generate_custom_images_examples(text, amount, device, gens_dir, txt2im_model
             plt.imsave(os.path.join(gens_dir, f'im_{" ".join(text.split(" ")[:5])}_{i}.png'), gen_im)
 
 
-def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model):
+def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model, sentence_similarity_model):
     """Generate new text and image from the test set
 
     :param device: device to use
     :param gens_dir: save the generated text and image in this file
     :param im2txt_model: trained im2txt model
     :param test_loader: test set data loader
-    :param txt2im_model: trained txt2im model 
+    :param txt2im_model: trained txt2im model
+    :param sentence_similarity_model: model for calculating sentences similarity
     """
     deTensor = transforms.ToPILImage()
+    sentence_similarity = 0.0
     with torch.no_grad():
         for i, (gt_im, txt_tokens, _, im_idx, txt_idx) in enumerate(test_loader):
             torch.cuda.empty_cache()
@@ -143,6 +149,8 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
             gen_sentence = im2txt_model.decode_text(gen_tokens)
             gen_sentence = [s.strip() for s in gen_sentence]
 
+            sentence_similarity += utils.sentence_similarity(sentence_similarity_model, gen_sentence, gt_sentence)
+
             # create an image with the gt image and sentence and gen image and sentence
             for j in range(len(gen_im)):
                 print(repr(gen_sentence[j]))
@@ -159,6 +167,9 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
                 plt.savefig(os.path.join(gens_dir,
                                          f"im{im_idx[j]:05}_sen{txt_idx[j]}.png"))
                 plt.close('all')
+
+        print(f"\nThe cosine similarity between the generated and the ground truth sentences is"
+              f" {sentence_similarity / len(test_loader) :.4f}")
 
 
 if __name__ == '__main__':

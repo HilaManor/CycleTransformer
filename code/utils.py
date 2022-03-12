@@ -3,6 +3,7 @@
 function _gen_unique_out_dir_path - generate a unique name for each new out dir
 function create_output_dir - create a new output dir
 function set_seed - set a seed for reproducibility
+function sentence_similarity - calculate similarity between sentences
 """
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~
@@ -11,6 +12,7 @@ import re
 import torch
 import random
 import numpy as np
+from sentence_transformers import util
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -63,3 +65,17 @@ def set_seed(seed=42):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+
+def sentence_similarity(model, gen_sentences, gt_sentences):
+    """Calculate the cosine similarity between sentences
+
+    :param model: sentence transformer model
+    :param gen_sentences: generated sentences
+    :param gt_sentences: ground truth sentences
+    :return: the cosine similarity between the generated sentences and the gt sentences a
+    """
+    gt_sentences_embeddings = model.encode(gt_sentences)
+    gen_sentences_embeddings = model.encode(gen_sentences)
+
+    return util.cos_sim(gt_sentences_embeddings, gen_sentences_embeddings)

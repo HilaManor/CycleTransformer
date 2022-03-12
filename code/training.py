@@ -167,7 +167,7 @@ def train(args, dataset, device):
                                                                     txt2im_recon_criterion, valid_loader, 
                                                                     args["txt2im_model_args"]["alpha"], 
                                                                     os.path.join(args["output_dir"], 'valid_ims'), 
-                                                                    epoch, baseline, device)
+                                                                    epoch, args["baseline"], device)
             logline = f"VALIDATION - Epoch: {epoch}/{args['epochs']} | Txt2Im Loss: {txt2im_running_loss:.4g} | " \
                       f"Im2Txt Loss: {im2txt_running_loss:.4g}"
             print(logline)

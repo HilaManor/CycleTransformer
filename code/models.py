@@ -183,6 +183,11 @@ class Text2Image(nn.Module):
         return self.tokenizer.batch_decode(ids, skip_special_tokens=True)  # [0]
 
     def encode_text(self, txt):
+        """Encode a given text using BERT's tokenizer
+
+        :param txt: text to encode
+        :return: tokenized text
+        """
         return self.tokenizer(txt, padding="max_length", truncation=True, max_length=self.txt_max_len,
                               return_tensors="pt").input_ids.squeeze()
 
