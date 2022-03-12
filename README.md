@@ -31,6 +31,7 @@ The code was tested on python v3.8.12 with the following libraries:
 | `numpy` | `1.21.3` |
 | `pillow` | `8.4.0` |
 | `pytorch` | `1.10.0+cu111` |
+| `rouge_score` | 0.0.4 |
 | `scikit-image` | `0.18.3` |
 | `scipy` | `1.7.1` |
 | `torchvision` | `0.11.1+cu111` |
@@ -43,7 +44,7 @@ We recommend using conda to deploy the project:
 git glone https://github.com/HilaManor/CycleTransformer.git && cd CycleTransformer
 conda create --name CycleTransformer python=3.8.12 pytorch=1.10.0 torchvision=0.11.1 cudatoolkit=11.1 numpy=1.21.3 scikit-image=0.18.3 matplotlib=3.4.3 scipy=1.7.1 pandas=1.3.4 pillow=8.4.0 tqdm -c pytorch -c conda-forge
 conda activate CycleTransformer
-pip install transformers==4.15.0 datasets==1.17.0
+pip install transformers==4.15.0 datasets==1.17.0 rouge_score==0.0.4
 ```
 ### IMPORTANT - Fixing Hugginface Bug
 
@@ -103,7 +104,7 @@ Hila Manor and Matan Kleiner
 ## Examples
 
 
-## Refrences
+## References
 1. Jun-Yan Zhu, Taesung Park, Phillip Isola, and Alexei A Efros. 2017. [Unpaired image-to-image translation using cycle-consistent adversarial networks](https://arxiv.org/abs/1703.10593), In *Proceedings of the IEEE international conference on computer vision*, pages 2223–2232. 
 2. Mohammad R. Alam, Nicole A. Isoda, Mitch C. Manzanares, Anthony C. Delgado, and Antonius F. Panggabean. 2021. [TextCycleGAN: cyclical-generative adversarial networks for image captioning](https://spie.org/Publications/Proceedings/Paper/10.1117/12.2585549), In *Artificial Intelligence and Machine Learning for Multi-Domain Operations Applications* III, volume 11746, pages 213 – 220. International Society for Optics and Photonics, SPIE
 3. Satya Krishna Gorti and Jeremy Ma. 2018. [Text-to-image-to-text translation using cycle consistent adversarial networks](https://arxiv.org/abs/1808.04538), *arXiv preprint*, arXiv:1808.04538
