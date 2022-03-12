@@ -38,6 +38,15 @@ The code was tested on python v3.8.12 with the following libraries:
 | `transformers` | `4.15.0` |
 
 
+We recommend using conda to deploy the project:  
+```bash
+git glone https://github.com/HilaManor/CycleTransformer.git && cd CycleTransformer
+conda create --name CycleTransformer python=3.8.12 pytorch=1.10.0 torchvision=0.11.1 cudatoolkit=11.1 numpy=1.21.3 scikit-image=0.18.3 matplotlib=3.4.3 scipy=1.7.1 pandas=1.3.4 pillow=8.4.0 tqdm -c pytorch -c conda-forge
+conda activate CycleTransformer
+pip install transformers==4.15.0 datasets==1.17.0
+```
+
+
 ## Repository Structure 
 ```
 ├── code - the code for training the CycleTransformer model
