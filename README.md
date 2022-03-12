@@ -103,7 +103,7 @@ Hila Manor and Matan Kleiner
 ## Examples
 
 
-## Refrences
+## References
 1. Jun-Yan Zhu, Taesung Park, Phillip Isola, and Alexei A Efros. 2017. [Unpaired image-to-image translation using cycle-consistent adversarial networks](https://arxiv.org/abs/1703.10593), In *Proceedings of the IEEE international conference on computer vision*, pages 2223–2232. 
 2. Mohammad R. Alam, Nicole A. Isoda, Mitch C. Manzanares, Anthony C. Delgado, and Antonius F. Panggabean. 2021. [TextCycleGAN: cyclical-generative adversarial networks for image captioning](https://spie.org/Publications/Proceedings/Paper/10.1117/12.2585549), In *Artificial Intelligence and Machine Learning for Multi-Domain Operations Applications* III, volume 11746, pages 213 – 220. International Society for Optics and Photonics, SPIE
 3. Satya Krishna Gorti and Jeremy Ma. 2018. [Text-to-image-to-text translation using cycle consistent adversarial networks](https://arxiv.org/abs/1808.04538), *arXiv preprint*, arXiv:1808.04538
