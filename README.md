@@ -26,16 +26,17 @@ Recently, some [2,3,4] took inspiration from CycleGAN's use of duality for unpai
 The code was tested on python v3.8.12 with the following libraries:
 | Library | Version |
 | ------------- | ------------- |
-| `torch` | `1.10.0+cu111` |
-| `torchvision` | `0.11.1+cu111` |
 | `datasets` | `1.17.0` |
-| `transformers` | `0.21.3` |
-| `numpy` | `1.21.3` |
-| `scipy` | `1.7.1` |
-| `pillow` | `8.4.0` |
-| `scikit-image` | `0.18.3` |
 | `matplotlib` | `3.4.3` |
+| `numpy` | `1.21.3` |
+| `pillow` | `8.4.0` |
+| `pytorch` | `1.10.0+cu111` |
+| `scikit-image` | `0.18.3` |
+| `scipy` | `1.7.1` |
+| `torchvision` | `0.11.1+cu111` |
 | `tqdm` | `4.63.0` |
+| `transformers` | `4.15.0` |
+
 
 ## Repository Structure 
 ```
@@ -65,6 +66,19 @@ Generates the images of the test split and generate captions for them, while com
 If the optional `--text` is given, will generate images from that text. The amount of generated images is given by `--amount`
 If the optional `--img_path` is given, will generate a text caption for the given image.
 Use `--help` for more information on the parameters.
+
+### Fixing Hugginface Bug
+
+The transformers code we've been working on had a bug which didn't allow the use of tensors in the ViT feature extraction method, which we had to fix in the library's code to allow complete gradient flow (for the consistency cycle).  
+This means that for our code to run, until the bugg will fixed in the offical repo, you must fix it yourself before running the code.
+
+To fix the bug you should edit `feature_extraction_utils.py` located in `<python_base_folder>/site-packages/transformers/`:  
+line 144 (under the function `as_tensor(value)`, declared in line 142 of transformersv4.15.0):  
+add:
+```python 
+elif isinstance(value, (list, torch.Tensor)):
+    return torch.stack(value)
+```
 
 ## Model 
 CycleTransformer model is comprised of Text-to-Image and Image-to-Text parts.
