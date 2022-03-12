@@ -16,8 +16,8 @@ from torchvision import transforms
 import argparse
 from FlowersDataset import ImageCaption102FlowersDataset
 import utils
+import datasets
 from PIL import Image
-from sentence_transformers import SentenceTransformer
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -42,9 +42,6 @@ def generate(args, dataset, transformations, device):
     txt2im_model.eval()
     im2txt_model.eval()
 
-    sentence_similarity_model = SentenceTransformer(args["sentence_similarity_name"])
-
-
     # generate new images and sentence from the test set
     _, _, test_loader = data_utils.get_loaders(args, dataset)
 
@@ -55,7 +52,7 @@ def generate(args, dataset, transformations, device):
     os.makedirs(gens_dir, exist_ok=True)
 
     if args["text"] is None and args["img_path"] is None:
-        generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model, sentence_similarity_model)
+        generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model)
     else:
         if args["text"] is not None:
             generate_custom_images_examples(args["text"], args["amount"], device, gens_dir, txt2im_model)
@@ -113,7 +110,7 @@ def generate_custom_images_examples(text, amount, device, gens_dir, txt2im_model
             plt.imsave(os.path.join(gens_dir, f'im_{" ".join(text.split(" ")[:5])}_{i}.png'), gen_im)
 
 
-def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model, sentence_similarity_model):
+def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model):
     """Generate new text and image from the test set
 
     :param device: device to use
@@ -121,10 +118,12 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
     :param im2txt_model: trained im2txt model
     :param test_loader: test set data loader
     :param txt2im_model: trained txt2im model
-    :param sentence_similarity_model: model for calculating sentences similarity
     """
     deTensor = transforms.ToPILImage()
-    sentence_similarity = 0.0
+    bleu = datasets.load_metric('bleu')
+    rouge = datasets.load_metric('rouge')
+    meteor = datasets.load_metric('meteor')
+
     with torch.no_grad():
         for i, (gt_im, txt_tokens, _, im_idx, txt_idx) in enumerate(test_loader):
             torch.cuda.empty_cache()
@@ -145,11 +144,11 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
             gt_im = [deTensor(x) for x in gt_im]
 
             # feed the generated image to the im2txt model to generate new sentences
-            gen_tokens = im2txt_model.generate(gen_im)
+            gen_tokens = im2txt_model.generate(gt_im)
             gen_sentence = im2txt_model.decode_text(gen_tokens)
             gen_sentence = [s.strip() for s in gen_sentence]
 
-            sentence_similarity += utils.sentence_similarity(sentence_similarity_model, gen_sentence, gt_sentence)
+            #bleu.add_batch(predictions=, references=)
 
             # create an image with the gt image and sentence and gen image and sentence
             for j in range(len(gen_im)):
