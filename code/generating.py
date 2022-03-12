@@ -16,6 +16,7 @@ from torchvision import transforms
 import argparse
 from FlowersDataset import ImageCaption102FlowersDataset
 import utils
+from tqdm import tqdm
 import datasets
 from PIL import Image
 
@@ -47,14 +48,16 @@ def generate(args, dataset, transformations, device):
 
     if args["text"] is None and args["img_path"] is None:
         gens_dir = os.path.join(args["output_dir"], "test_generations")
-        with open(os.path.join(gens_dir, 'test_split_images.txt'), 'w') as f:
-            for _, _, _, im_idx, _ in test_loader:
-                f.write(f'image_{im_idx:05}.jpg\n')
     else:
         gens_dir = os.path.join(args["output_dir"], "custom_generations")
     os.makedirs(gens_dir, exist_ok=True)
 
     if args["text"] is None and args["img_path"] is None:
+        print('Writing the test split images names')
+        with open(os.path.join(gens_dir, 'test_split_images.txt'), 'w') as f:
+            for _, _, _, im_idx, _ in tqdm(test_loader):
+                for i in range(len(im_idx)):
+                    f.write(f'image_{im_idx[i]:05}.jpg\n')
         generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model, dataset)
     else:
         if args["text"] is not None:
@@ -123,11 +126,17 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
     bleu = datasets.load_metric('bleu')
     rouge = datasets.load_metric('rouge')
     meteor = datasets.load_metric('meteor')
+  
+    comparisons_dir = os.path.join(gens_dir, 'comparisons')
+    generated_images_dir = os.path.join(gens_dir, 'all generated images')
+    os.makedirs(comparisons_dir, exist_ok=True)
+    os.makedirs(generated_images_dir, exist_ok=True)
 
     gen_sentences = []
 
+    print('generating test images')
     with torch.no_grad():
-        for i, (gt_im, txt_tokens, _, im_idx, txt_idx) in enumerate(test_loader):
+        for i, (gt_im, txt_tokens, _, im_idx, txt_idx) in enumerate(tqdm(test_loader)):
             torch.cuda.empty_cache()
             # tokenize the input sentence and feed it to txt2im model to generate new images
             txt_tokens = txt_tokens.to(device)
@@ -143,7 +152,6 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
 
             # convert the gen and gt im from tensors to PIL images
             gen_im = [deTensor(x) for x in gen_im.detach().cpu()]
-            gt_im = [deTensor(x) for x in gt_im]
             gt_im = gt_im.to(device)
             gt_im = [x for x in gt_im]
 
@@ -152,7 +160,7 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
             gen_sentence = im2txt_model.decode_text(gen_tokens)
             gen_sentence = [s.strip() for s in gen_sentence]
 
-            gt_im = [deTensor(x) for x in gt_im.detach().cpu()]
+            gt_im = [deTensor(x) for x in gt_im]
             #bleu.add_batch(predictions=, references=)
 
             # create an image with the gt image and sentence and gen image and sentence
@@ -166,24 +174,25 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
                 plt.imshow(gt_im[j])
                 plt.title('Ground Truth Image')
 
-                plt.suptitle(f'GT: {gt_sentence[j]}\n\nGen: {gen_sentence[j]}', warp=True)
-                plt.savefig(os.path.join(gens_dir,
+                plt.suptitle(f'GT: {gt_sentence[j]}\n\nGen: {gen_sentence[j]}', wrap=True)
+                plt.savefig(os.path.join(comparisons_dir,
                                          f"im{im_idx[j]:05}_sen{txt_idx[j]}.png"))
                 plt.close('all')
 
                 gen_sentences.append((gen_sentence[j], im_idx[j]))
+                gen_im[j].save(os.path.join(generated_images_dir,f'im{im_idx[j]:05}_sen{txt_idx[j]}.png'))
 
         # calculate metrics
         for gen_sentence, im_idx in gen_sentences:
             ref_sentences = dataset.get_captions_of_image(im_idx)
-            meteor.add_batch(predictions=[gen_sentence], references=ref_sentences)
-            rouge.add_batch(predictions=[gen_sentence], references=ref_sentences)
+            meteor.add_batch(predictions=[gen_sentence], references=[ref_sentences])
+            rouge.add_batch(predictions=[gen_sentence], references=[ref_sentences])
             bleu.add_batch(predictions=[gen_sentence.split(' ')], references=[[r.split(' ') for r in ref_sentences]])
         m_score = meteor.compute()['meteor']
-        r_score = rouge.compute()['rougeL']
+        r_score = rouge.compute()['rougeL'].mid.fmeasure
         b_score = bleu.compute()['bleu']
 
-        logline = f"\nMETEOR score: {m_score:.4g} \t ROUGE score: {r_score:.4g} \t BLEU-4 score: {b_score}:.4g"
+        logline = f"\nMETEOR score: {m_score:.4g} \nBLEU-4 score: {b_score:.4g} \nROUGE score: {r_score:.4g}"
         print(logline)
         with open(os.path.join(gens_dir, 'scores.txt'), 'w') as f:
             f.write(logline + '\n')
