@@ -19,6 +19,8 @@ import utils
 from tqdm import tqdm
 import datasets
 from PIL import Image
+from fid_score_override import calculate_fid_given_paths
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -182,7 +184,7 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
                 gen_sentences.append((gen_sentence[j], im_idx[j]))
                 gen_im[j].save(os.path.join(generated_images_dir,f'im{im_idx[j]:05}_sen{txt_idx[j]}.png'))
 
-        # calculate metrics
+        # calculate text metrics
         for gen_sentence, im_idx in gen_sentences:
             ref_sentences = dataset.get_captions_of_image(im_idx)
             meteor.add_batch(predictions=[gen_sentence], references=[ref_sentences])
@@ -192,11 +194,15 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
         r_score = rouge.compute()['rougeL'].mid.fmeasure
         b_score = bleu.compute()['bleu']
 
-        logline = f"\nMETEOR score: {m_score:.4g} \nBLEU-4 score: {b_score:.4g} \nROUGE score: {r_score:.4g}"
-        print(logline)
-        with open(os.path.join(gens_dir, 'scores.txt'), 'w') as f:
-            f.write(logline + '\n')
-
+    # calculate image metrics
+    fid_score = calculate_fid_given_paths(os.path.join(args["db_path"], "imgs"), generated_images_dir, device)
+    
+    logline = f"\nMETEOR score: {m_score:.4g} \nBLEU-4 score: {b_score:.4g} \nROUGE score: {r_score:.4g}\nFID score: {fid_score:.4g}"
+    print(logline)
+    with open(os.path.join(gens_dir, 'scores.txt'), 'w') as f:
+        f.write(logline + '\n')
+    
+    
 if __name__ == '__main__':
     # ----- Creating Argument Parser -----
     parser = argparse.ArgumentParser('CycleTransformer Generator Only')
