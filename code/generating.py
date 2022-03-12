@@ -1,6 +1,9 @@
 """Generating new images and sentences from the trained CycleTransformer model
 
 function generate - generate new images and sentences
+function generate_custom_text_examples - generate text from user's image
+function generate_custom_images_examples - generate images from user's text
+function generate_test_examples - generate image and text from the test set
 """
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,16 +54,24 @@ def generate(args, dataset, transformations, device):
         generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model)
     else:
         if args["text"] is not None:
-            gen_im = generate_custom_images_examples(args["text"], args["amount"], device, gens_dir, txt2im_model)
-
+            generate_custom_images_examples(args["text"], args["amount"], device, gens_dir, txt2im_model)
         if args["img_path"] is not None:
             generate_custom_text_examples(args["img_path"], device, gens_dir, im2txt_model, transformations)
 
 
 def generate_custom_text_examples(img_path, device, gens_dir, im2txt_model, transform):
+    """Generate new text from the user's image
+
+    :param img_path: path to the user's image
+    :param device: device to use
+    :param gens_dir: save the generated text in this file
+    :param im2txt_model: trained im2txt model
+    :param transform: the transformation applied to the user's images
+    """
     with torch.no_grad():
         torch.cuda.empty_cache()
 
+        # load and pre process the user's image
         im = Image.open(img_path).convert("RGB")
         im = transform(im).to(device)
         im = [x for x in im]
@@ -75,6 +86,14 @@ def generate_custom_text_examples(img_path, device, gens_dir, im2txt_model, tran
 
 
 def generate_custom_images_examples(text, amount, device, gens_dir, txt2im_model):
+    """Generate new images from the user's text
+
+    :param text: the user's text for which to generate an image
+    :param amount: number of images to generate
+    :param device: device to use
+    :param gens_dir: save the generated images in this file
+    :param txt2im_model: trained txt2im model
+    """
     deTensor = transforms.ToPILImage()
     with torch.no_grad():
         torch.cuda.empty_cache()
@@ -88,10 +107,17 @@ def generate_custom_images_examples(text, amount, device, gens_dir, txt2im_model
             gen_im = [deTensor(x) for x in gen_im.detach().cpu()]
 
             plt.imsave(os.path.join(gens_dir, f'im_{" ".join(text.split(" ")[:5])}_{i}.png'), gen_im)
-    return gen_im
 
 
 def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model):
+    """Generate new text and image from the test set
+
+    :param device: device to use
+    :param gens_dir: save the generated text and image in this file
+    :param im2txt_model: trained im2txt model
+    :param test_loader: test set data loader
+    :param txt2im_model: trained txt2im model 
+    """
     deTensor = transforms.ToPILImage()
     with torch.no_grad():
         for i, (gt_im, txt_tokens, _, im_idx, txt_idx) in enumerate(test_loader):
