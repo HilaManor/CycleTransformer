@@ -47,6 +47,9 @@ def generate(args, dataset, transformations, device):
 
     if args["text"] is None and args["img_path"] is None:
         gens_dir = os.path.join(args["output_dir"], "test_generations")
+        with open(os.path.join(gens_dir, 'test_split_images.txt'), 'w') as f:
+            for _, _, _, im_idx, _ in test_loader:
+                f.write(f'image_{im_idx:05}.jpg\n')
     else:
         gens_dir = os.path.join(args["output_dir"], "custom_generations")
     os.makedirs(gens_dir, exist_ok=True)
@@ -75,14 +78,13 @@ def generate_custom_text_examples(img_path, device, gens_dir, im2txt_model, tran
         # load and pre process the user's image
         im = Image.open(img_path).convert("RGB")
         im = transform(im).to(device)
-        im = [x for x in im]
+        im = [im]
 
         # feed the generated image to the im2txt model to generate new sentences
         gen_tokens = im2txt_model.generate(im)
-        gen_sentence = im2txt_model.decode_text(gen_tokens)
-        gen_sentence = [s.strip() for s in gen_sentence]
+        gen_sentence = im2txt_model.decode_text(gen_tokens)[0].strip()
 
-        with open(os.path.join(gens_dir, f'{img_path}.txt'), 'w') as txtf:
+        with open(os.path.join(gens_dir, f'{os.path.basename(img_path)}.txt'), 'w') as txtf:
             txtf.write(gen_sentence + '\n')
 
 
@@ -99,15 +101,13 @@ def generate_custom_images_examples(text, amount, device, gens_dir, txt2im_model
     with torch.no_grad():
         torch.cuda.empty_cache()
         # tokenize the given sentence and feed it to txt2im model to generate new images
-        txt_tokens = txt2im_model.encode_text(text).to(device)
-
+        txt_tokens = txt2im_model.encode_text(text).to(device).unsqueeze(0)
         for i in range(amount):
             gen_im = txt2im_model(txt_tokens)
 
             # convert the gen and gt im from tensors to PIL images
-            gen_im = [deTensor(x) for x in gen_im.detach().cpu()]
-
-            plt.imsave(os.path.join(gens_dir, f'im_{" ".join(text.split(" ")[:5])}_{i}.png'), gen_im)
+            gen_im = deTensor(gen_im.detach().cpu()[0])
+            gen_im.save(os.path.join(gens_dir, f'im_{" ".join(text.split(" ")[:5])}_{i}.png'))
 
 
 def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_model):
@@ -123,6 +123,8 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
     bleu = datasets.load_metric('bleu')
     rouge = datasets.load_metric('rouge')
     meteor = datasets.load_metric('meteor')
+
+    gen_sentences = []
 
     with torch.no_grad():
         for i, (gt_im, txt_tokens, _, im_idx, txt_idx) in enumerate(test_loader):
@@ -142,17 +144,19 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
             # convert the gen and gt im from tensors to PIL images
             gen_im = [deTensor(x) for x in gen_im.detach().cpu()]
             gt_im = [deTensor(x) for x in gt_im]
+            gt_im = gt_im.to(device)
+            gt_im = [x for x in gt_im]
 
             # feed the generated image to the im2txt model to generate new sentences
             gen_tokens = im2txt_model.generate(gt_im)
             gen_sentence = im2txt_model.decode_text(gen_tokens)
             gen_sentence = [s.strip() for s in gen_sentence]
 
+            gt_im = [deTensor(x) for x in gt_im.detach().cpu()]
             #bleu.add_batch(predictions=, references=)
 
             # create an image with the gt image and sentence and gen image and sentence
             for j in range(len(gen_im)):
-                print(repr(gen_sentence[j]))
                 plt.figure()
                 plt.subplot(1, 2, 1)
                 plt.imshow(gen_im[j])
@@ -162,13 +166,10 @@ def generate_test_examples(device, gens_dir, im2txt_model, test_loader, txt2im_m
                 plt.imshow(gt_im[j])
                 plt.title('Ground Truth Image')
 
-                plt.suptitle(f'GT: {gt_sentence[j]}\nGen: {gen_sentence[j]}')
+                plt.suptitle(f'GT: {gt_sentence[j]}\n\nGen: {gen_sentence[j]}', warp=True)
                 plt.savefig(os.path.join(gens_dir,
                                          f"im{im_idx[j]:05}_sen{txt_idx[j]}.png"))
                 plt.close('all')
-
-        print(f"\nThe cosine similarity between the generated and the ground truth sentences is"
-              f" {sentence_similarity / len(test_loader) :.4f}")
 
 
 if __name__ == '__main__':
@@ -180,13 +181,15 @@ if __name__ == '__main__':
     parser.add_argument('--amount', type=int, default=1, help="The amount of images to generate from the cutsom text, "
                                                               "if given (via '--text')")
     parsed_args = parser.parse_args()
-
+  
     # define device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using {device}")
 
     # load the pre trained models' args
     args = torch.load(os.path.join(parsed_args.out_dir, 'models.pth'), map_location=device)['args']
+    # This type of loading gives precedence to the parser arguments
+    args.update(vars(parsed_args))
 
     # set seed for reproducibility
     utils.set_seed(42)
