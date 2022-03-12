@@ -41,7 +41,7 @@ The code was tested on python v3.8.12 with the following libraries:
 ```
 ├── code - the code for training the CycleTransformer model
 ├── config - configurations for the CycleTransformer model
-├── short_paper - short paper in ACL format describing the CycleTransformer model 
+└── short_paper - short paper in ACL format describing the CycleTransformer model 
 ```
 
 ## Usage Example
@@ -52,23 +52,24 @@ python main.py --epochs <training_epochs> --val_epochs <validation_every_x_epoch
 ```
 
 At each validation epoch the validation loss is shown and some images and captions are created from the validation split.  
-If the optional `--baseline` is given, will train the baseline models.  
+If the optional `--baseline` is given, will train the baseline models instead.  
 Use `--help` for more information on the parameters.
 
 ### Generating Images and Captions
 
 ```bash
-python main.py --out_dir <path_to_trained_model_dir> [--text <optional_text_prompt>]
+python main.py --out_dir <path_to_trained_model_dir> [--text <optional_text_prompt>] [--img_path <optional_image_path>] [--amount <amount_of_images_to_generate>]
 ```
 
 Generates the images of the test split and generate captions for them, while comparing to the ground truths.  
-If the optional `--text` is given, will create a single image from that text and generate a corresponding caption to it.
+If the optional `--text` is given, will generate images from that text. The amount of generated images is given by `--amount`
+If the optional `--img_path` is given, will generate a text caption for the given image.
 Use `--help` for more information on the parameters.
 
 ## Model 
 CycleTransformer model is comprised of Text-to-Image and Image-to-Text parts.
 
-The Text-to-Image model is comprised of distill BERT for text embedding. We concatenate a random noise vector sampled from the standard normal distributed to this embedding and then feed it to an image generator model. The Text-to-Image model is trained using perceptaul and reconstruction loss. 
+The Text-to-Image model is comprised of distill BERT for text embedding. We concatenate a random noise vector sampled from the standard normal distributed to this embedding and then feed it to an image generator model. The Text-to-Image model is trained using perceptaul and reconstruction losses. 
 
 The Image-to-text model is an encoder decoder structure composed of distill DeiT model for features extractor and a GPT2 for text generation. This model is trained using language modelling loss. 
 
