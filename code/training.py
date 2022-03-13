@@ -2,6 +2,7 @@
 
 function train - train the entire model
 function calc_metrics - evaluate the model during training loop
+function load_checkpoint - continue training a model from a checkpoint
 """
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,6 +58,7 @@ def train(args, dataset, device):
               'txt2im_recon_running_loss': [],
               'txt2im_style_running_loss': []}
 
+    # if you want to continue training a model from a checkpoint
     if args["continue_training"]:
         txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer, losses, start_epoch, \
             start_k = load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer,
@@ -323,6 +325,17 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
 
 
 def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer, losses, args, device):
+    """Load a model from checkpoint and continue training it
+
+    :param txt2im_model: txt2im model to load from checkpoint
+    :param im2txt_model: im2txt model to load from checkpoint
+    :param txt2im_optimizer: txt2im optimizer to load from checkpoint
+    :param im2txt_optimizer: im2txt optimizer to load from checkpoint
+    :param losses: losses to loaf from checkpoint
+    :param args: training arguments to load from checkpoint
+    :param device: device to use
+    :return: everything you need to continue training
+    """
     start_epoch = 1
     start_k = 1
 
@@ -336,7 +349,7 @@ def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimiz
         losses = epoch_checkpoint["losses"]
         im2txt_model.load_state_dict(epoch_checkpoint["im2txt"])
         im2txt_optimizer.load_state_dict(epoch_checkpoint["optimizer_im2txt"])
-        print(f"loaded IM2TXT from {model_pth_path}\n"
+        print(f"Loaded IM2TXT from {model_pth_path}\n"
               f"Starting on epoch {start_epoch}")
 
     gen_files = [x for x in pth_files if x.startswith('gen')]
@@ -352,7 +365,7 @@ def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimiz
     if best_gstep_checkpoint is None and len(avail_model_epochs):
         txt2im_model.load_state_dict(epoch_checkpoint["txt2im"])
         txt2im_optimizer.load_state_dict(epoch_checkpoint["optimizer_txt2im"])
-        print(f"loaded TXT2IM from {model_pth_path}\n"
+        print(f"Loaded TXT2IM from {model_pth_path}\n"
               f"Starting on epoch {start_epoch}, k {start_k}")
     elif best_gstep_checkpoint is None:
         raise RuntimeError("No pth files saved. the code shouldn't reach here")
@@ -360,7 +373,7 @@ def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimiz
         txt2im_model.load_state_dict(best_gstep_checkpoint["txt2im"])
         txt2im_optimizer.load_state_dict(best_gstep_checkpoint["optimizer_txt2im"])
         start_k = best_gstep_checkpoint["k"] + 1
-        print(f"loaded IM2TXT from {os.path.join(args['output_dir'], f'generator_k{max_gstep}.pth')}\n"
+        print(f"Loaded IM2TXT from {os.path.join(args['output_dir'], f'generator_k{max_gstep}.pth')}\n"
               f"Starting on epoch {start_epoch}, k {start_k}")
 
     return txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer, losses, start_epoch, start_k
