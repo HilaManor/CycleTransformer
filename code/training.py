@@ -56,8 +56,16 @@ def train(args, dataset, device):
               'txt2im_running_loss': [],
               'txt2im_recon_running_loss': [],
               'txt2im_style_running_loss': []}
+
+    if args["continue_training"]:
+        txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer, losses, start_epoch, \
+            start_k = load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer,
+                                      losses, args, device)
+    else:
+        start_epoch = 1
+        start_k = 1
     
-    for epoch in range(1, args["epochs"] + 1):
+    for epoch in range(start_epoch, args["epochs"] + 1):
         txt2im_model.train()
         im2txt_model.train()
         im2txt_running_loss = 0.0
@@ -68,7 +76,7 @@ def train(args, dataset, device):
         
         # first do g_step iterations of **just** txt2im model to give the image generator a head start
         # because the image generator is the only part we train from scratch
-        for k in range(1, args["txt2im_model_args"]["g_step"]):
+        for k in range(start_k, args["txt2im_model_args"]["g_step"]):
             for im, txt_tokens, _, _, _ in tqdm(train_loader):
                 txt_tokens = txt_tokens.to(device)
                 im_gt = im.to(device)
@@ -93,7 +101,9 @@ def train(args, dataset, device):
                         'k': k, 
                         'args': args}, os.path.join(args["output_dir"], f'generator_k{k}.pth'))               
             print(f"Finished {k}/{args['txt2im_model_args']['g_step'] - 1} iteration in g-step")
-            
+
+        start_k = 1  # zeroing out start_k in case we were continuing from checkpoint
+
         # after g_step iteration of just txt2im models, train the all model
         for i, (im, txt_tokens, masked_txt_tokens, _, _) in enumerate(tqdm(train_loader)):
             # text to image
@@ -310,3 +320,47 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
     im2txt_running_loss /= len(dataloader)
 
     return txt2im_running_loss, im2txt_running_loss
+
+
+def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer, losses, args, device):
+    start_epoch = 1
+    start_k = 1
+
+    pth_files = [x for x in os.listdir(args["output_dir"]) if x.endswith('.pth')]
+    avail_model_epochs = [int(x[8:-4]) for x in pth_files if x.startswith('mod')]
+    if len(avail_model_epochs):
+        max_model_epoch = max(avail_model_epochs)
+        model_pth_path = os.path.join(args["output_dir"], f'models_e{max_model_epoch}.pth')
+        epoch_checkpoint = torch.load(model_pth_path, map_location=device)
+        start_epoch = epoch_checkpoint["epochs"] + 1
+        losses = epoch_checkpoint["losses"]
+        im2txt_model.load_state_dict(epoch_checkpoint["im2txt"])
+        im2txt_optimizer.load_state_dict(epoch_checkpoint["optimizer_im2txt"])
+        print(f"loaded IM2TXT from {model_pth_path}\n"
+              f"Starting on epoch {start_epoch}")
+
+    gen_files = [x for x in pth_files if x.startswith('gen')]
+    max_gstep = 0
+    best_gstep_checkpoint = None
+    for k_file in gen_files:
+        gstep_checkpoint = torch.load(os.path.join(args["output_dir"], k_file), map_location=device)
+        if gstep_checkpoint["epochs"] >= start_epoch:
+            if gstep_checkpoint["k"] > max_gstep:
+                max_gstep = gstep_checkpoint["k"]
+                best_gstep_checkpoint = gstep_checkpoint
+
+    if best_gstep_checkpoint is None and len(avail_model_epochs):
+        txt2im_model.load_state_dict(epoch_checkpoint["txt2im"])
+        txt2im_optimizer.load_state_dict(epoch_checkpoint["optimizer_txt2im"])
+        print(f"loaded TXT2IM from {model_pth_path}\n"
+              f"Starting on epoch {start_epoch}, k {start_k}")
+    elif best_gstep_checkpoint is None:
+        raise RuntimeError("No pth files saved. the code shouldn't reach here")
+    else:
+        txt2im_model.load_state_dict(best_gstep_checkpoint["txt2im"])
+        txt2im_optimizer.load_state_dict(best_gstep_checkpoint["optimizer_txt2im"])
+        start_k = best_gstep_checkpoint["k"] + 1
+        print(f"loaded IM2TXT from {os.path.join(args['output_dir'], f'generator_k{max_gstep}.pth')}\n"
+              f"Starting on epoch {start_epoch}, k {start_k}")
+
+    return txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer, losses, start_epoch, start_k
