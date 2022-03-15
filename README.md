@@ -62,8 +62,7 @@ elif isinstance(value, (list, torch.Tensor)):
 ## Repository Structure 
 ```
 ├── code - the code for training the CycleTransformer model
-├── config - configurations for the CycleTransformer model
-└── short_paper - short paper in ACL format describing the CycleTransformer model 
+└── config - configurations for the CycleTransformer model
 ```
 
 ## Usage Example
