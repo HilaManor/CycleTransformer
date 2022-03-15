@@ -55,7 +55,8 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError("No such DB")
 
-    utils.create_output_dir(args)
+    if not args["continue_training"]:
+        utils.create_output_dir(args)
 
     # define device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
