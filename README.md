@@ -100,7 +100,7 @@ Read our short paper for more detailes about the model.
 ![model](https://user-images.githubusercontent.com/63591190/157965275-6a900647-f0ad-4421-b799-df3a00d835ed.png)
 
 ## Team
-Hila Manor(https://www.linkedin.com/in/hilamanor/) and Matan Kleiner(https://www.linkedin.com/in/matan-kleiner/)
+[Hila Manor](https://www.linkedin.com/in/hilamanor/) and [Matan Kleiner](https://www.linkedin.com/in/matan-kleiner/)
 
 ## Examples
 ![image](https://user-images.githubusercontent.com/53814901/158409123-67fb7b88-79d9-4626-ae1b-73e1b0ac8fd5.png)
