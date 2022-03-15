@@ -87,6 +87,17 @@ If the optional `--text` is given, will generate images from that text. The amou
 If the optional `--img_path` is given, will generate a text caption for the given image.  
 Use `--help` for more information on the parameters.
 
+### Pretrained Weights
+
+Pretrained weights for the cycle consistent model are available via:
+```bash
+wget https://technionmail-my.sharepoint.com/:u:/g/personal/matankleiner_campus_technion_ac_il/EdACN8TSdyVLjoE_mbmk7yYBkUpziemLWeIeFVKfgA4DJQ?e=58I2s3
+```
+
+Pretrained weights for the baseline models are available via:
+```bash
+wget https://technionmail-my.sharepoint.com/:u:/g/personal/matankleiner_campus_technion_ac_il/EdACN8TSdyVLjoE_mbmk7yYBkUpziemLWeIeFVKfgA4DJQ?e=C1RG4d
+```
 
 ## Model 
 CycleTransformer model is comprised of Text-to-Image and Image-to-Text parts.  
