@@ -2,6 +2,7 @@
 
 function train - train the entire model
 function calc_metrics - evaluate the model during training loop
+function load_checkpoint - continue training a model from a checkpoint
 """
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -58,6 +59,7 @@ def train(args, dataset, device):
               'txt2im_recon_running_loss': [],
               'txt2im_style_running_loss': []}
 
+    # if you want to continue training a model from a checkpoint
     if args["continue_training"]:
         txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer, losses, start_epoch, \
             start_k = load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer,
@@ -324,6 +326,17 @@ def calc_metrics(txt2im_model, im2txt_model, txt2im_crit_style, txt2im_crit_reco
 
 
 def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer, losses, args, device):
+    """Load a model from checkpoint and continue training it
+
+    :param txt2im_model: txt2im model to load from checkpoint
+    :param im2txt_model: im2txt model to load from checkpoint
+    :param txt2im_optimizer: txt2im optimizer to load from checkpoint
+    :param im2txt_optimizer: im2txt optimizer to load from checkpoint
+    :param losses: losses to loaf from checkpoint
+    :param args: training arguments to load from checkpoint
+    :param device: device to use
+    :return: everything you need to continue training
+    """
     start_epoch = 1
     start_k = 1
 
@@ -341,8 +354,8 @@ def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimiz
         txt2im_optimizer.load_state_dict(epoch_checkpoint["optimizer_txt2im"])
         print(f"loaded IM2TXT from {model_pth_path}")
 
-    del epoch_checkpoint
-    torch.cuda.empty_cache()
+        del epoch_checkpoint
+        torch.cuda.empty_cache()
 
     gen_files = [x for x in pth_files if x.startswith('gen')]
     max_gstep = 0

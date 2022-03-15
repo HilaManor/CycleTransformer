@@ -1,6 +1,8 @@
 """
-This code is almost a carbon copy of the original library pytorch-fid by mseitzer, available here https://github.com/mseitzer/pytorch-fid
-There was no way to pass additional transformation to the images for the 'get_activations' function, meaning all images in the folders had to be of the same size - which they are not.
+This code is almost a carbon copy of the original library pytorch-fid by mseitzer,
+available here https://github.com/mseitzer/pytorch-fid
+There was no way to pass additional transformation to the images for the 'get_activations' function, meaning all
+images in the folders had to be of the same size - which they are not.
 The code is given as is with the original documentation as to not change the original author's documentation wants.
 The only change is the addition of the Resize((224,224)) transformation in 'get_activations'. 
 """
