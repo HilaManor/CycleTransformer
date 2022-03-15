@@ -103,6 +103,17 @@ Read our short paper for more detailes about the model.
 Hila Manor and Matan Kleiner
 
 ## Examples
+![image](https://user-images.githubusercontent.com/53814901/158409123-67fb7b88-79d9-4626-ae1b-73e1b0ac8fd5.png)
+Comparison between the baseline models and the cycle consistent model on more generation results, for the Text-to-Image task and the Image-to-Test task. The baseline models generations are more varied in shape and display more coherent colors. The generated sentences are also more diverse in the language used and the different elements of the flower are described with greater detail.
+
+![image](https://user-images.githubusercontent.com/53814901/158409282-7a2834a8-cbc4-482e-9db9-0c61f41522c6.png)
+Comparison between the results of the baseline and the cycle-consistent Image-to-Text models, for custom images on the Image-to-Text task. All the image were found online and are under creative commons license. The first three flowers (Gilboa Iris, Nazareth Iris and Mountain Tulip, respectively) are not part of the original dataset flower species. The last flower (Daffodil) is a specie present in the original dataset. 
+    The caption created by the baseline model are more accurate and do not include colors that don't appear in the input image. The cycle consistent model also creates good captions but in the case of the Nazareth Iris and the Daffodil, it mentions that the flower's color is purple which is not the case.
+
+
+
+![image](https://user-images.githubusercontent.com/53814901/158409298-f33afed7-278a-4909-80c5-aa333385b142.png)
+Comparison between the results of the baseline and the cycle-consistent Text-to-Image models, for custom text prompts on the Text-to-Image task. The first two sentences are simple, describing a single flower with one prominent color. In both cases, both models create a blob of the specified color in the center of the image, where the baseline model's blob's shape is a bit more flower-like. The next two sentences are more complicated, one of them describes more than one flower and the other describes 3 different-colored parts of the flower. The first sentence created a similar image response for both models. The seconds sentence caused the baseline model to generate a blob that merges two of the described colors whereas the cycle consistent model generated a colorful blob, without relating it to the mentioned colors. The last two sentences are the most complex ones. Both models generate similar results, while the the baseline model's results are a bit more pleasing to the eye.
 
 
 ## References
