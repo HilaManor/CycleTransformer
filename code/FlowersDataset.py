@@ -79,9 +79,9 @@ class ImageCaption102FlowersDataset(Dataset):
         return im, txt2im_labels, im2txt_masked_labels, img_idx, txt_idx
 
     def get_captions_of_image(self, img_idx):
-        """Get all the captions (10) of a given image
+        """Get all the captions (10) of a given image by its index
 
-        :param img_idx: idx of a given image
+        :param img_idx: index of a given image
         :return: a list of all the captions (10) of a given image
         """
         with open(os.path.join(self.txts_path, f'image_{img_idx:05}.txt')) as f:

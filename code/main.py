@@ -34,6 +34,7 @@ if __name__ == '__main__':
         args = yaml.load(f, Loader=yaml.FullLoader)
     args.update(vars(parsed_args))
 
+    # If the option for training continuation from a checkpoint was marked, check if it's possible to continue
     if args["continue_training"] is not None:
         # The first saved thing is the generator_k1.pth file, so if no such file exists - there is no mid-training
         # state to continue from

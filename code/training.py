@@ -340,14 +340,19 @@ def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimiz
     start_epoch = 1
     start_k = 1
 
+    # search for saved weights files
     pth_files = [x for x in os.listdir(args["output_dir"]) if x.endswith('.pth')]
+
+    # Search for end-of-epoch saved models (containing both parts - txt2im and im2txt)
     avail_model_epochs = [int(x[8:-4]) for x in pth_files if x.startswith('mod')]
     if len(avail_model_epochs):
-        max_model_epoch = max(avail_model_epochs)
+        max_model_epoch = max(avail_model_epochs)  # get the max epoch saved
         model_pth_path = os.path.join(args["output_dir"], f'models_e{max_model_epoch}.pth')
-        epoch_checkpoint = torch.load(model_pth_path, map_location=device)
-        start_epoch = epoch_checkpoint["epochs"] + 1
+        epoch_checkpoint = torch.load(model_pth_path, map_location=device)  # load it
+        start_epoch = epoch_checkpoint["epochs"] + 1  # the starting epoch should be the following epoch
         losses = epoch_checkpoint["losses"]
+
+        # load the last saved models
         im2txt_model.load_state_dict(epoch_checkpoint["im2txt"])
         im2txt_optimizer.load_state_dict(epoch_checkpoint["optimizer_im2txt"])
         txt2im_model.load_state_dict(epoch_checkpoint["txt2im"])
@@ -357,6 +362,8 @@ def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimiz
         del epoch_checkpoint
         torch.cuda.empty_cache()
 
+    # the txt2im model can continue to be updated (and saved) in the middle of an epoch, so now we search for the
+    # latest saved gstep after the max epoch found previously
     gen_files = [x for x in pth_files if x.startswith('gen')]
     max_gstep = 0
     best_gstep_checkpoint = None
@@ -368,14 +375,17 @@ def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimiz
     
     del gstep_checkpoint
     torch.cuda.empty_cache()
-    
+
+    # if we found a more recent gstep we now need to load the updated txt2im
     if max_gstep != 0:
         best_gstep_checkpoint = torch.load(os.path.join(args["output_dir"], f'generator_k{max_gstep}.pth'), map_location=device)
 
     if best_gstep_checkpoint is None and len(avail_model_epochs):
         print(f"loaded TXT2IM from {model_pth_path}\n"
               f"Starting on epoch {start_epoch}, k {start_k}")
+        # the TXT2IM model was loaded from the last saved epoch
     elif best_gstep_checkpoint is None:
+        # If we got here someone deleted the saved pth files while the code was running
         raise RuntimeError("No pth files saved. the code shouldn't reach here")
     else:
         txt2im_model.load_state_dict(best_gstep_checkpoint["txt2im"])
@@ -383,5 +393,6 @@ def load_checkpoint(txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimiz
         start_k = best_gstep_checkpoint["k"] + 1
         print(f"loaded TXT2IM from {os.path.join(args['output_dir'], f'generator_k{max_gstep}.pth')}\n"
               f"Starting on epoch {start_epoch}, k {start_k}")
+        # the TXT2IM model was successfully loaded from the last saved gstep
 
     return txt2im_model, im2txt_model, txt2im_optimizer, im2txt_optimizer, losses, start_epoch, start_k
