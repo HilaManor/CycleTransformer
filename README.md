@@ -7,8 +7,6 @@
 
 # CycleTransformer
 
-**Insert Image**
-
 Both Text-to-Image translation and Image-to-Text translation have been an active area of research in the recent past [5,6,7]. Both tasks are difficult and interesting problems to solve: The Image-to-Text task demands that the generated caption will faithfully describe the image, while the Text-to-Image task demands that the generated image should be a faithful visual representation of the given text. Usually only one task is handled at a time, and the methods are tailored for extracting data from one domain and translating it to the other domain. 
 
 Recently, some [2,3,4] took inspiration from CycleGAN's use of duality for unpaired data [1], by leveraging the cycle consistency duality for paired data of different domains, such as text and images. Inspired by those papers and recent advancements in deep learning and NLP, in this assignment we propose a novel architecture, CycleTransformer, to handle both Text-to-Image translation and Image-to-Text translation on paired data, using a unified architecture of transformers and CNNs and enforcing cycle consistency.
